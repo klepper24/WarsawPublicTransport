@@ -1,0 +1,18 @@
+version: "3.8"
+services:
+  mongo-python:
+    build: ./Stops
+    container_name: project
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=pass12345
+      - MONGO_INITDB_DATABASE=admin
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - C:\Users\mklep\Desktop\PythonProject\Docker\database:/data/db
+      - C:\Users\mklep\Desktop\PythonProject\Docker\mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+    restart: always
+
