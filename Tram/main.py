@@ -11,3 +11,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+#Magda - tutaj bylam
