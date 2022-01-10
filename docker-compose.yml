@@ -2,7 +2,7 @@ version: "3.8"
 services:
   mongo-python:
     build: ./Stops
-    container_name: project
+    container_name: mongo
     environment:
       - PUID=1000
       - PGID=1000
@@ -15,4 +15,19 @@ services:
       - C:\Users\mklep\Desktop\PythonProject\Docker\database:/data/db
       - C:\Users\mklep\Desktop\PythonProject\Docker\mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
     restart: always
+    networks:
+        - internal-network
+  
+  redis-python:
+    container_name: redis
+    image: redislabs/rejson
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - C:\Users\mklep\Desktop\PythonProject\Docker\redis_database:/data
+    networks:
+        - internal-network
+            
+networks:
+    internal-network:
 
