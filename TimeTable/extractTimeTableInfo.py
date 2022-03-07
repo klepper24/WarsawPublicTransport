@@ -46,7 +46,7 @@ def extract_time_table():
                     line_number = line.split()[1]
                 elif '*TR' in line:
                     num_of_route = line.strip()[3:]
-                elif ('*RP' or '#OP') in line:
+                elif '*RP' in line or '#OP' in line:
                     line = next(f)
                     stop_info = line.split()
                     unit = stop_info[0][0:4]
