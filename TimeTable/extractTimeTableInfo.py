@@ -8,7 +8,7 @@ directory = os.fsencode('tram_data/')
 
 
 def extract_lines():
-    with open("RA211219_test.txt", "rt", encoding="utf8") as file:
+    with open("RA220213.txt", "rt", encoding="utf8") as file:
         for line in file:
             if "Linia:" in line and len(line.split()[1]) < 3 and line.split()[1].isdecimal():
                 tram_number = line.split()[1]
