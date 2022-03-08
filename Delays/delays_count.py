@@ -42,13 +42,8 @@ stops = mongo_stops \
     .drop(func.col("_id")) \
     .drop(func.col("coordinates")) \
     .withColumn("stop_nr", func.concat(func.col("unit"), func.col("post"))) \
-    .drop(func.col("unit")) \
     .drop(func.col("post")) \
     .withColumnRenamed("unit_name", "StopName")
-
-stops.show()
-# test_stops = stops.filter(func.col("unit") > 5003).select("unit_name", "Lon", "Lat")
-# test_stops.show()
 
 # ROUTES INFO
 routes_json = spark \
@@ -69,9 +64,7 @@ routes = exploded_routes_json \
             "stops_details.max_time")
 
 routes_coord = routes.alias("r").join(stops.alias("s"), routes.stop_nr == stops.stop_nr) \
-    .select("r.*", "s.Lat", "s.Lon")
-
-routes_coord.show()
+    .select("r.*", "s.Lat", "s.Lon", func.col("s.unit").alias("Unit"))
 
 # TIMETABLE INFO
 timetable = spark \
@@ -85,8 +78,7 @@ timetable_stop = timetable.alias("tt") \
     .join(stops, timetable.stop_nr == stops.stop_nr) \
     .select(func.col("line").alias("Lines"), func.col("route").alias("Route"),
             func.col("tt.stop_nr").alias("StopNo"), func.col("departure_time").alias("DepTime"),
-            func.col("order").alias("Order"), func.col("day_type").alias("DayType"), "StopName")
-timetable_stop.show()
+            func.col("order").alias("Order"), func.col("day_type").alias("DayType"), func.col("tt.unit").alias("Unit"))
 timetable_stop.createOrReplaceTempView("timetable")
 
 # TRAM INFO
@@ -104,19 +96,19 @@ trams_stops = trams \
     .withColumn("row_number",
                 func.row_number().over(Window.partitionBy("Lines", "Brigade", "Time").orderBy(func.col("distance")))) \
     .filter(func.col("row_number") == 1) \
-    .select("Lines", trams["Lat"], trams["Lon"], "VehicleNumber", "SplitTime", "Brigade", "StopName", "distance") \
+    .select("Lines", trams["Lat"], trams["Lon"], "VehicleNumber", "CurrTramTime", "Brigade", "StopName", "Unit", "distance") \
     .distinct() \
-    .withColumn("LowerTime", func.date_format(func.col("CurrTramTime") - func.expr("INTERVAL 10 minutes"), 'HH:mm:ss')) \
-    .withColumn("UpperTime", func.date_format(func.col("CurrTramTime") + func.expr("INTERVAL 3 minutes"), 'HH:mm:ss'))
+    .withColumn("LowerTime", func.date_format(func.col("CurrTramTime") - func.expr("INTERVAL 3 minutes"), 'HH:mm:ss')) \
+    .withColumn("UpperTime", func.date_format(func.col("CurrTramTime") + func.expr("INTERVAL 10 minutes"), 'HH:mm:ss'))
 trams_stops.orderBy("Lines", "Brigade", "Time").show()
 trams_stops.createOrReplaceTempView("trams_stops")
 
 results = spark.sql(
-    "SELECT t.*, ti.Lines AS TT_Lines, date_format(ti.DepTime, 'HH:mm:ss') AS DepTime, ti.StopNo, ti.DayType, ti.Route , ti.Order " +
+    "SELECT distinct t.*, ti.Lines AS TT_Lines, date_format(ti.DepTime, 'HH:mm:ss') AS DepTime, ti.StopNo, ti.DayType, ti.Route , ti.Order " +
     "FROM trams_stops AS t " +
     "INNER JOIN timetable AS ti " +
     "ON t.Lines == ti.Lines " +
-    "and t.StopName == ti.StopName " +
+    "and t.Unit == ti.Unit " +
     "and t.lowerTime < ti.DepTime " +
     "and t.upperTime > ti.DepTime " +
     "and ti.DayType == 'DP' ")
