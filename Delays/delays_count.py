@@ -83,7 +83,7 @@ timetable_stop.createOrReplaceTempView("timetable")
 
 # TRAM INFO
 tram_json = spark.read.option("multiLine", "True").format("json").load(
-    ["tram_data/test/tram20211007143535.json"])
+    ["tram_data/test/tram20220320202400.json"])
 exploded_tram_json = tram_json.withColumn("details", func.explode(func.col("result"))).drop("result")
 trams = exploded_tram_json \
     .select("details.Lines", "details.Lon", "details.Lat", "details.VehicleNumber", "details.Time", "details.Brigade") \
@@ -104,7 +104,8 @@ trams_stops.orderBy("Lines", "Brigade", "Time").show()
 trams_stops.createOrReplaceTempView("trams_stops")
 
 results = spark.sql(
-    "SELECT distinct t.*, ti.Lines AS TT_Lines, date_format(ti.DepTime, 'HH:mm:ss') AS DepTime, ti.StopNo, ti.DayType, ti.Route , ti.Order " +
+    "SELECT distinct t.*, ti.Lines AS TT_Lines, date_format(ti.DepTime, 'HH:mm:ss') AS DepTime, ti.StopNo, ti.DayType, ti.Route , ti.Order, " +
+    "(unix_timestamp(to_timestamp(t.CurrTramTime))-unix_timestamp(to_timestamp(ti.DepTime))) AS Delay " +
     "FROM trams_stops AS t " +
     "INNER JOIN timetable AS ti " +
     "ON t.Lines == ti.Lines " +
