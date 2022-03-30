@@ -44,8 +44,7 @@ def load_stops_to_MongoDB(stops_list: list[Stop]):
     for record in cursor:
         print(record)
         
-        
-    my_collection.createIndex({"coordinates": "2dsphere"})
+    my_database.my_collection.createIndex({"coordinates": "2dsphere"})
 
 
 # def create_stops_map(stops_list: list[Stop]):

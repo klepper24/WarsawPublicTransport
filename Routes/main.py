@@ -120,9 +120,9 @@ def create_json():
 
 
 def main():
-    # cut_file()
-    # create_json()
-    reply = get_json_from_redis('3', '.routes[1].stops[0]')
+    #cut_file()
+    create_json()
+    reply = get_json_from_redis('1', '.routes[1].stops[0]')
     print(reply)
 
 

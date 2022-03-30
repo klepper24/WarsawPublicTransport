@@ -27,8 +27,12 @@ class Tram:
         my_client = pymongo.MongoClient("mongodb://root:pass12345@localhost:27017/")
         my_database = my_client["WarsawPublicTransport"]
         my_collection = my_database["Stops"]
-        stop = my_collection.find({'coordinates': {'$nearSphere': {'$geometry': {'type': 'Point', 'coordinates': [self.Latitude, self.Longitude]}, '$maxDistance': 100}}}).limit(1)
+
+        stop = my_collection.find({'coordinates': {'$nearSphere': {'$geometry': {'type': 'Point', 'coordinates':
+            [self.Latitude, self.Longitude]}, '$maxDistance': 100}}}).limit(1)
+
         for document in stop:
-            return document["unit_name"]
+            return document["unit_name"],document["unit"] + (document["post"])
+
 
 
