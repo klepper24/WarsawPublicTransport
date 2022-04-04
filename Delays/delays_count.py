@@ -3,6 +3,7 @@ from pyspark.sql import functions as func
 from math import radians, cos, sin, asin, sqrt
 from pyspark.sql.types import DoubleType
 from pyspark.sql.window import Window
+from pyspark.sql.functions import array_contains
 
 
 # harvesine method in meters
@@ -25,6 +26,8 @@ udf_get_distance = func.udf(get_distance, DoubleType())
 
 MONGO_URL = "mongodb://root:pass12345@localhost:27017/WarsawPublicTransport.Stops?authSource=admin"
 
+MONGO_URL2 = "mongodb://root:pass12345@localhost:27017/WarsawPublicTransport.Calendar?authSource=admin"
+
 spark = SparkSession \
     .builder \
     .appName("WarsawTransportation") \
@@ -32,6 +35,7 @@ spark = SparkSession \
     .config("spark.mongodb.output.uri", MONGO_URL) \
     .config('spark.jars.packages', 'org.mongodb.spark:mongo-spark-connector_2.12:3.0.1') \
     .getOrCreate()
+
 
 # STOPS INFO
 mongo_stops = spark \
@@ -44,6 +48,7 @@ stops = mongo_stops \
     .withColumn("stop_nr", func.concat(func.col("unit"), func.col("post"))) \
     .drop(func.col("post")) \
     .withColumnRenamed("unit_name", "StopName")
+
 
 # ROUTES INFO
 routes_json = spark \
@@ -87,7 +92,8 @@ tram_json = spark.read.option("multiLine", "True").format("json").load(
 exploded_tram_json = tram_json.withColumn("details", func.explode(func.col("result"))).drop("result")
 trams = exploded_tram_json \
     .select("details.Lines", "details.Lon", "details.Lat", "details.VehicleNumber", "details.Time", "details.Brigade") \
-    .withColumn('CurrTramTime', func.date_format(func.split(func.col("Time"), " ").getItem(1), 'HH:mm:ss'))
+    .withColumn('CurrTramTime', func.date_format(func.split(func.col("Time"), " ").getItem(1), 'HH:mm:ss'))\
+    .withColumn("Date", func.date_format(func.split(func.col("Time"), " ").getItem(0), 'yyyy-MM-dd'))
 trams.sort("Lines", "Brigade").show()
 
 trams_stops = trams \
@@ -96,21 +102,50 @@ trams_stops = trams \
     .withColumn("row_number",
                 func.row_number().over(Window.partitionBy("Lines", "Brigade", "Time").orderBy(func.col("distance")))) \
     .filter(func.col("row_number") == 1) \
-    .select("Lines", trams["Lat"], trams["Lon"], "VehicleNumber", "CurrTramTime", "Brigade", "StopName", "Unit", "distance") \
+    .select("Lines", trams["Lat"], trams["Lon"], "VehicleNumber", "CurrTramTime", "Date", "Brigade", "StopName", "Unit", "distance") \
     .distinct() \
     .withColumn("LowerTime", func.date_format(func.col("CurrTramTime") - func.expr("INTERVAL 3 minutes"), 'HH:mm:ss')) \
     .withColumn("UpperTime", func.date_format(func.col("CurrTramTime") + func.expr("INTERVAL 10 minutes"), 'HH:mm:ss'))
 trams_stops.orderBy("Lines", "Brigade", "Time").show()
 trams_stops.createOrReplaceTempView("trams_stops")
 
+
+mongo_calendar = spark.read \
+    .option("uri", MONGO_URL2) \
+    .format("com.mongodb.spark.sql.DefaultSource") \
+    .load()
+
+
+# CALENDAR
+
+calendar = mongo_calendar \
+    .withColumnRenamed("day", "Day") \
+    .withColumn("Is_DP", array_contains(mongo_calendar.day_types, "DP")) \
+    .withColumn("Is_DS", array_contains(mongo_calendar.day_types, "N7"))\
+    .withColumn("Is_SB", array_contains(mongo_calendar.day_types, "SB")) \
+    .drop(func.col("_id"))
+calendar.show(100)
+calendar.createOrReplaceTempView("calendar")
+
+
 results = spark.sql(
     "SELECT distinct t.*, ti.Lines AS TT_Lines, date_format(ti.DepTime, 'HH:mm:ss') AS DepTime, ti.StopNo, ti.DayType, ti.Route , ti.Order, " +
-    "(unix_timestamp(to_timestamp(t.CurrTramTime))-unix_timestamp(to_timestamp(ti.DepTime))) AS Delay " +
+    "(unix_timestamp(to_timestamp(t.CurrTramTime))-unix_timestamp(to_timestamp(ti.DepTime))) AS Delay, " +
+    "CASE WHEN c.Is_DP == True THEN 'DP' " +
+    "WHEN c.Is_SB == True  THEN 'SB' " +
+    "WHEN c.Is_DS == True AND c.Is_SB == False THEN 'DS' " +
+    "END as Day_Type "
     "FROM trams_stops AS t " +
     "INNER JOIN timetable AS ti " +
     "ON t.Lines == ti.Lines " +
     "and t.Unit == ti.Unit " +
+    "INNER JOIN calendar AS c " +
+    "ON t.Date == c.Day "
     "and t.lowerTime < ti.DepTime " +
-    "and t.upperTime > ti.DepTime " +
+    "and t.upperTime > ti.DepTime "
     "and ti.DayType == 'DP' ")
 results.sort("Lines", "Brigade", "distance", "DepTime", "Route", "Order").show(1000)
+
+
+
+
