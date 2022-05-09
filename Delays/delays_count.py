@@ -3,7 +3,7 @@ from pyspark.sql import functions as func
 from math import radians, cos, sin, asin, sqrt
 from pyspark.sql.types import DoubleType
 from pyspark.sql.window import Window
-from pyspark.sql.functions import array_contains
+#from pyspark.sql import functions as f
 
 
 # harvesine method in meters
@@ -88,7 +88,7 @@ timetable_stop.createOrReplaceTempView("timetable")
 
 # TRAM INFO
 tram_json = spark.read.option("multiLine", "True").format("json").load(
-    ["tram_data/test/tram20220320202400.json"])
+    ["tram_data/test/*.json"])
 exploded_tram_json = tram_json.withColumn("details", func.explode(func.col("result"))).drop("result")
 trams = exploded_tram_json \
     .select("details.Lines", "details.Lon", "details.Lat", "details.VehicleNumber", "details.Time", "details.Brigade") \
@@ -119,10 +119,10 @@ mongo_calendar = spark.read \
 # CALENDAR
 
 calendar = mongo_calendar \
-    .withColumnRenamed("day", "Day") \
-    .withColumn("Is_DP", array_contains(mongo_calendar.day_types, "DP")) \
-    .withColumn("Is_DS", array_contains(mongo_calendar.day_types, "N7"))\
-    .withColumn("Is_SB", array_contains(mongo_calendar.day_types, "SB")) \
+    .withColumn("DayType", func.when(func.array_contains(func.col("day_types"), "DP") == True, "DP")
+    .when(func.array_contains(func.col("day_types"), "N7") == True, "DS")
+    .when(func.array_contains(func.col("day_types"), "SB") == True, "SB")
+    .otherwise("Unknown")) \
     .drop(func.col("_id"))
 calendar.show(100)
 calendar.createOrReplaceTempView("calendar")
@@ -130,22 +130,16 @@ calendar.createOrReplaceTempView("calendar")
 
 results = spark.sql(
     "SELECT distinct t.*, ti.Lines AS TT_Lines, date_format(ti.DepTime, 'HH:mm:ss') AS DepTime, ti.StopNo, ti.DayType, ti.Route , ti.Order, " +
-    "(unix_timestamp(to_timestamp(t.CurrTramTime))-unix_timestamp(to_timestamp(ti.DepTime))) AS Delay, " +
-    "CASE WHEN c.Is_DP == True THEN 'DP' " +
-    "WHEN c.Is_SB == True  THEN 'SB' " +
-    "WHEN c.Is_DS == True AND c.Is_SB == False THEN 'DS' " +
-    "END as Day_Type "
+    "(unix_timestamp(to_timestamp(t.CurrTramTime))-unix_timestamp(to_timestamp(ti.DepTime))) AS Delay " +
     "FROM trams_stops AS t " +
     "INNER JOIN timetable AS ti " +
     "ON t.Lines == ti.Lines " +
     "and t.Unit == ti.Unit " +
     "INNER JOIN calendar AS c " +
-    "ON t.Date == c.Day "
+    "ON t.Date == c.Day " +
+    "and ti.DayType == c.DayType " +
     "and t.lowerTime < ti.DepTime " +
-    "and t.upperTime > ti.DepTime "
-    "and ti.DayType == 'DP' ")
-results.sort("Lines", "Brigade", "distance", "DepTime", "Route", "Order").show(1000)
-
-
+    "and t.upperTime > ti.DepTime " )
+results.sort("CurrTramTime", "Lines", "Brigade", "distance", "DepTime", "Route", "Order").show(1000)
 
 
