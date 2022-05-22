@@ -70,13 +70,30 @@ routes = exploded_routes_json \
 
 routes_coord = routes.alias("r").join(stops.alias("s"), routes.stop_nr == stops.stop_nr) \
     .select("r.*", "s.Lat", "s.Lon", func.col("s.unit").alias("Unit"))
+routes_coord.orderBy("line_nr", "route_nr","min_time").show(100)
+# CALENDAR
+mongo_calendar = spark.read \
+    .option("uri", MONGO_URL2) \
+    .format("com.mongodb.spark.sql.DefaultSource") \
+    .load()
+
+
+calendar = mongo_calendar \
+    .withColumn("DayType", func.when(func.array_contains(func.col("day_types"), "DP") == True, "DP")
+    .when(func.array_contains(func.col("day_types"), "N7") == True, "DS")
+    .when(func.array_contains(func.col("day_types"), "SB") == True, "SB")
+    .otherwise("Unknown")) \
+    .drop(func.col("_id"))
+calendar.show(100)
+calendar.createOrReplaceTempView("calendar")
+
 
 # TIMETABLE INFO
 timetable = spark \
     .read \
     .option("multiLine", "True") \
     .format("json") \
-    .load("tram_data/timetable/tram_line1.json") \
+    .load("tram_data/timetable/*.json") \
     .withColumn("stop_nr", func.concat(func.col("unit"), func.col("post")))
 
 timetable_stop = timetable.alias("tt") \
@@ -104,29 +121,10 @@ trams_stops = trams \
     .filter(func.col("row_number") == 1) \
     .select("Lines", trams["Lat"], trams["Lon"], "VehicleNumber", "CurrTramTime", "Date", "Brigade", "StopName", "Unit", "distance") \
     .distinct() \
-    .withColumn("LowerTime", func.date_format(func.col("CurrTramTime") - func.expr("INTERVAL 3 minutes"), 'HH:mm:ss')) \
-    .withColumn("UpperTime", func.date_format(func.col("CurrTramTime") + func.expr("INTERVAL 10 minutes"), 'HH:mm:ss'))
+    .withColumn("LowerTime", func.date_format(func.col("CurrTramTime") - func.expr("INTERVAL 10 minutes"), 'HH:mm:ss')) \
+    .withColumn("UpperTime", func.date_format(func.col("CurrTramTime") + func.expr("INTERVAL 3 minutes"), 'HH:mm:ss'))
 trams_stops.orderBy("Lines", "Brigade", "Time").show()
 trams_stops.createOrReplaceTempView("trams_stops")
-
-
-mongo_calendar = spark.read \
-    .option("uri", MONGO_URL2) \
-    .format("com.mongodb.spark.sql.DefaultSource") \
-    .load()
-
-
-# CALENDAR
-
-calendar = mongo_calendar \
-    .withColumn("DayType", func.when(func.array_contains(func.col("day_types"), "DP") == True, "DP")
-    .when(func.array_contains(func.col("day_types"), "N7") == True, "DS")
-    .when(func.array_contains(func.col("day_types"), "SB") == True, "SB")
-    .otherwise("Unknown")) \
-    .drop(func.col("_id"))
-calendar.show(100)
-calendar.createOrReplaceTempView("calendar")
-
 
 results = spark.sql(
     "SELECT distinct t.*, ti.Lines AS TT_Lines, date_format(ti.DepTime, 'HH:mm:ss') AS DepTime, ti.StopNo, ti.DayType, ti.Route , ti.Order, " +
@@ -139,7 +137,48 @@ results = spark.sql(
     "ON t.Date == c.Day " +
     "and ti.DayType == c.DayType " +
     "and t.lowerTime < ti.DepTime " +
-    "and t.upperTime > ti.DepTime " )
-results.sort("CurrTramTime", "Lines", "Brigade", "distance", "DepTime", "Route", "Order").show(1000)
+    "and t.upperTime > ti.DepTime " +
+    "and ti.Lines == 41 " +
+    "and VehicleNumber == 3213 ")
+results = results.sort("CurrTramTime", "Lines", "Brigade", "distance", "DepTime", "Route", "Order")
+results.show()
+
+my_window = Window.partitionBy().orderBy("CurrTramTime", "Lines", "Brigade", "distance", "DepTime", "Route", "Order")
+previous_stops = results.withColumn("PrevStop",
+                                    func.when(results.StopName != func.lag(results.StopName).over(my_window),
+                                              func.lag(results.StopName).over(my_window))) \
+         .withColumn("PrevStopCorrected", func.when(func.col("PrevStop").isNull() == True,
+                                                    func.last(func.col("PrevStop"), True).over(my_window))
+                     .otherwise(func.col("PrevStop"))) \
+         .drop(func.col("PrevStop"))
+previous_stops.sort("CurrTramTime", "Lines", "Brigade", "distance", "DepTime", "Route", "Order").show()
+previous_stops.createOrReplaceTempView("previous_stops")
+
+routes_window = Window.partitionBy().orderBy("line_nr", "route_nr","min_time")
+routes_order = routes_coord.select("line_nr", "route_nr", "stop_nr","StopName","min_time") \
+    .withColumn("Prev_Stop_Route", func.when(routes_coord.StopName != func.lag(routes_coord.StopName).over(routes_window),
+                                             func.lag(routes_coord.StopName).over(routes_window))) \
+    .withColumn("PrevCorrected", func.when(func.col("Prev_Stop_Route").isNull() == True,
+                                           func.last(func.col("Prev_Stop_Route"), True).over(routes_window))
+                .otherwise(func.col("Prev_Stop_Route"))) \
+    .drop(func.col("Prev_Stop_Route")) \
+    .distinct()
+routes_order.orderBy("line_nr", "route_nr", "min_time").show(100)
+routes_order.createOrReplaceTempView("routes_order")
 
 
+''''
+direction = previous_stops.alias('a') \
+            .join(routes_order.alias('b'),  [previous_stops.Lines == routes_order.line_nr, "a.StopNo == b.stop_nr"], "LEFT") \
+            .drop(routes_order.stop_nr)
+'''
+
+direction = spark.sql(
+    "SELECT ps.*, ro.line_nr, ro.stop_nr, ro.StopNAme , ro.route_nr AS Direction " +
+    "FROM previous_stops AS ps " +
+    "LEFT JOIN routes_order AS ro " +
+    "ON ps.Lines == ro.line_nr " +
+    "and ps.StopNo == ro.stop_nr " +
+    "and ps.PrevStopCorrected == ro.PrevCorrected ")
+   # "and ps.Route == ro.route_nr ")
+direction.show(1000)
