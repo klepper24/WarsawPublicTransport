@@ -174,3 +174,32 @@ direction = spark.sql(
     "and ps.StopNo == ro.stop_nr " +
     "and ps.PrevStopCorrected == ro.PrevCorrected ")
 direction.filter("Direction is not NULL").orderBy("Lines", "VehicleNumber", "LowerTime").show(1000)
+
+
+# Send data to SQL Server database
+
+def write_data_to_sql_server(database, table, data_frame):
+    user = "sa"
+    password = "Pass1234!"
+
+    data_frame.write \
+        .mode("append") \
+        .format("jdbc") \
+        .option("url",
+                f"jdbc:sqlserver://localhost:1433;databaseName={database};encrypt=true;trustServerCertificate=true") \
+        .option("dbtable", table) \
+        .option("user", user) \
+        .option("password", password) \
+        .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver") \
+        .save()
+
+
+stops_data = stops["stop_nr","StopName"].distinct()
+tram_data = trams_stops["Lines", "VehicleNumber", "Brigade"].distinct()
+calendar_data = calendar["DayType", "day"]
+fact_data = direction["StopNo", "VehicleNumber", "Date", "DepTime", "Delay"]
+
+# write_data_to_sql_server("WarsawPublicTransport", "Stops", stops_data)
+# write_data_to_sql_server("WarsawPublicTransport", "Trams", tram_data)
+# write_data_to_sql_server("WarsawPublicTransport", "Calendar", calendar_data)
+write_data_to_sql_server("WarsawPublicTransport", "Delays", fact_data)
