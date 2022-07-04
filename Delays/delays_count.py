@@ -3,7 +3,6 @@ from pyspark.sql import functions as func
 from math import radians, cos, sin, asin, sqrt
 from pyspark.sql.types import DoubleType
 from pyspark.sql.window import Window
-#from pyspark.sql import functions as f
 
 
 # harvesine method in meters
@@ -70,7 +69,8 @@ routes = exploded_routes_json \
 
 routes_coord = routes.alias("r").join(stops.alias("s"), routes.stop_nr == stops.stop_nr) \
     .select("r.*", "s.Lat", "s.Lon", func.col("s.unit").alias("Unit"))
-routes_coord.orderBy("line_nr", "route_nr","min_time").show(100)
+routes_coord.orderBy("line_nr", "route_nr", "min_time")
+
 # CALENDAR
 mongo_calendar = spark.read \
     .option("uri", MONGO_URL2) \
@@ -84,7 +84,6 @@ calendar = mongo_calendar \
     .when(func.array_contains(func.col("day_types"), "SB") == True, "SB")
     .otherwise("Unknown")) \
     .drop(func.col("_id"))
-calendar.show(100)
 calendar.createOrReplaceTempView("calendar")
 
 
@@ -111,7 +110,7 @@ trams = exploded_tram_json \
     .select("details.Lines", "details.Lon", "details.Lat", "details.VehicleNumber", "details.Time", "details.Brigade") \
     .withColumn('CurrTramTime', func.date_format(func.split(func.col("Time"), " ").getItem(1), 'HH:mm:ss'))\
     .withColumn("Date", func.date_format(func.split(func.col("Time"), " ").getItem(0), 'yyyy-MM-dd'))
-trams.sort("Lines", "Brigade").show()
+trams.sort("Lines", "Brigade")
 
 trams_stops = trams \
     .join(routes_coord, trams.Lines == routes_coord.line_nr, "inner") \
@@ -123,7 +122,7 @@ trams_stops = trams \
     .distinct() \
     .withColumn("LowerTime", func.date_format(func.col("CurrTramTime") - func.expr("INTERVAL 10 minutes"), 'HH:mm:ss')) \
     .withColumn("UpperTime", func.date_format(func.col("CurrTramTime") + func.expr("INTERVAL 3 minutes"), 'HH:mm:ss'))
-trams_stops.orderBy("Lines", "Brigade", "Time").show()
+trams_stops.orderBy("Lines", "Brigade", "Time")
 trams_stops.createOrReplaceTempView("trams_stops")
 
 results = spark.sql(
@@ -137,13 +136,13 @@ results = spark.sql(
     "ON t.Date == c.Day " +
     "and ti.DayType == c.DayType " +
     "and t.lowerTime < ti.DepTime " +
-    "and t.upperTime > ti.DepTime " +
-    "and ti.Lines == 41 " +
-    "and VehicleNumber == 3213 ")
-results = results.sort("CurrTramTime", "Lines", "Brigade", "distance", "DepTime", "Route", "Order")
-results.show()
+    "and t.upperTime > ti.DepTime ")
+results = results.sort("Lines", "VehicleNumber", "CurrTramTime", "Brigade", "distance", "DepTime", "Route", "Order")
+results.show(1000)
 
-my_window = Window.partitionBy().orderBy("CurrTramTime", "Lines", "Brigade", "distance", "DepTime", "Route", "Order")
+
+# Find previous stop
+my_window = Window.partitionBy().orderBy("Lines", "VehicleNumber", "CurrTramTime", "distance", "DepTime", "Route", "Order")
 previous_stops = results.withColumn("PrevStop",
                                     func.when(results.StopName != func.lag(results.StopName).over(my_window),
                                               func.lag(results.StopName).over(my_window))) \
@@ -151,11 +150,11 @@ previous_stops = results.withColumn("PrevStop",
                                                     func.last(func.col("PrevStop"), True).over(my_window))
                      .otherwise(func.col("PrevStop"))) \
          .drop(func.col("PrevStop"))
-previous_stops.sort("CurrTramTime", "Lines", "Brigade", "distance", "DepTime", "Route", "Order").show()
+previous_stops.sort("Lines", "VehicleNumber", "CurrTramTime", "Brigade", "distance", "DepTime", "Route", "Order").show()
 previous_stops.createOrReplaceTempView("previous_stops")
 
-routes_window = Window.partitionBy().orderBy("line_nr", "route_nr","min_time")
-routes_order = routes_coord.select("line_nr", "route_nr", "stop_nr","StopName","min_time") \
+routes_window = Window.partitionBy().orderBy("line_nr", "route_nr", "min_time")
+routes_order = routes_coord.select("line_nr", "route_nr", "stop_nr", "StopName", "min_time") \
     .withColumn("Prev_Stop_Route", func.when(routes_coord.StopName != func.lag(routes_coord.StopName).over(routes_window),
                                              func.lag(routes_coord.StopName).over(routes_window))) \
     .withColumn("PrevCorrected", func.when(func.col("Prev_Stop_Route").isNull() == True,
@@ -166,19 +165,12 @@ routes_order = routes_coord.select("line_nr", "route_nr", "stop_nr","StopName","
 routes_order.orderBy("line_nr", "route_nr", "min_time").show(100)
 routes_order.createOrReplaceTempView("routes_order")
 
-
-''''
-direction = previous_stops.alias('a') \
-            .join(routes_order.alias('b'),  [previous_stops.Lines == routes_order.line_nr, "a.StopNo == b.stop_nr"], "LEFT") \
-            .drop(routes_order.stop_nr)
-'''
-
+# Find tram direction based on previous stop
 direction = spark.sql(
-    "SELECT ps.*, ro.line_nr, ro.stop_nr, ro.StopNAme , ro.route_nr AS Direction " +
+    "SELECT ps.*, ro.line_nr, ro.stop_nr, ro.StopName AS Stop_Name, ro.route_nr AS Direction " +
     "FROM previous_stops AS ps " +
     "LEFT JOIN routes_order AS ro " +
     "ON ps.Lines == ro.line_nr " +
     "and ps.StopNo == ro.stop_nr " +
     "and ps.PrevStopCorrected == ro.PrevCorrected ")
-   # "and ps.Route == ro.route_nr ")
-direction.show(1000)
+direction.filter("Direction is not NULL").orderBy("Lines", "VehicleNumber", "LowerTime").show(1000)
