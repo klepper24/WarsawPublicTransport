@@ -7,7 +7,7 @@ class TimeTable:
     day_type: str
     unit: int
     post: str
-    departure_time: datetime
+    departure_time: str
     order: int
 
     def __init__(self, line, route, day_type, unit, post, departure_time, order):
