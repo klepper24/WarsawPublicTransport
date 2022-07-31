@@ -1,14 +1,44 @@
 import json
 from TimeTable import TimeTable
 import os
-import time
 import datetime
+import wget
+import py7zr
+import codecs
 
 directory = os.fsencode('tram_data/')
+link = 'ftp://rozklady.ztm.waw.pl'
 
 
-def extract_lines():
-    with open("RA220213.txt", "rt", encoding="utf8") as file:
+def download_tram_data(ztm_url):
+    """
+    download timetable .txt file from ftp server
+    change encoding from ansi to utf8
+
+    :param str ztm_url: link to ftp server with timetable files
+    :return str: the name of the latest timetable file
+    """
+    ftp = wget.download(ztm_url)
+    with open(ftp) as f:
+        files_list = [line.rstrip('\n') for line in f]
+    file_name = files_list[-1][-11:]
+    link_to_file = f'{link}/{file_name}'
+    tram_file = wget.download(link_to_file)
+    with py7zr.SevenZipFile(tram_file, mode='r') as z:
+        z.extractall('./ftp')
+        tram_file_name = z.getnames()
+    tram_file_name = tram_file_name[0]
+
+    # change encoding
+    with codecs.open(f'./ftp/{tram_file_name}', 'r', encoding='ansi') as file:
+        lines = file.read()
+    with codecs.open(f'./ftp/{tram_file_name}', 'w', encoding='utf8') as file:
+        file.write(lines)
+    return tram_file_name
+
+
+def extract_lines(tram_file_name):
+    with open(f'./ftp/{tram_file_name}', "rt", encoding="utf8") as file:
         for line in file:
             if "Linia:" in line and len(line.split()[1]) < 3 and line.split()[1].isdecimal():
                 tram_number = line.split()[1]
@@ -29,9 +59,9 @@ def extract_lines():
 
 def convert_to_time(str_hour: str):
     if '24.' not in str_hour:
-       hour = datetime.datetime.strptime(str_hour, '%H.%M').time()
+        hour = datetime.datetime.strptime(str_hour, '%H.%M').time()
     else:
-       hour = datetime.datetime.strptime(str_hour.replace('24.', '00.'), '%H.%M').time()
+        hour = datetime.datetime.strptime(str_hour.replace('24.', '00.'), '%H.%M').time()
     return hour
 
 
@@ -70,9 +100,10 @@ def extract_time_table():
 
 
 def main():
-    extract_lines()
+    file = download_tram_data(link)
+    extract_lines(file)
     extract_time_table()
 
 
 if __name__ == "__main__":
-    main()
+   main()
