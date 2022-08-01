@@ -58,7 +58,7 @@ def extract_lines(tram_file_name):
         for line in file:
             if "Linia:" in line and len(line.split()[1]) < 3 and line.split()[1].isdecimal():
                 tram_number = line.split()[1]
-                f = open(f'tram_data/tram_line{tram_number}.txt', "w", encoding="utf8")
+                f = open(f'tram_test/tram_line{tram_number}.txt', "w", encoding="utf8")
                 while True:
                     try:
                         f.write(line)
@@ -82,11 +82,11 @@ def convert_to_time(str_hour: str):
 
 
 def extract_time_table():
+    time_table = []
     for file in os.listdir(directory):
         filename = os.fsdecode(file)
-        time_table = []
         if filename.endswith(".txt"):
-            f = open(f'tram_data/{filename}', "r", encoding="utf8")
+            f = open(f'tram_test/{filename}', "r", encoding="utf8")
             for line in f:
                 if 'Linia:' in line:
                     line_number = line.split()[1]
@@ -104,6 +104,7 @@ def extract_time_table():
                         hour, stop = line.split()
                         departure_time = convert_to_time(hour)
                         route, day_type, _ = stop.split('/')
+                        #print(line_number)
                         new_time_table = TimeTable(int(line_number), route, day_type, unit, post, str(departure_time), n)
                         time_table.append(new_time_table)
                         line = next(f)
