@@ -10,7 +10,8 @@ current_date = str(datetime.datetime.today()).split()[0]
 
 def extract_lines():
     calendar_days= []
-    with open("RA220213.txt", "rt", encoding="utf8") as file:
+    file_name = os.listdir('./ftp/')[0]
+    with open(f"./ftp/{file_name}", "rt", encoding="utf8") as file:
         for line in file:
             if "*KA" in line:
                 line = next(file)
