@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as func
 from math import radians, cos, sin, asin, sqrt
-from pyspark.sql.types import DoubleType
+from pyspark.sql.types import DoubleType, IntegerType
 from pyspark.sql.window import Window
 
 
@@ -23,15 +23,15 @@ def get_distance(longit_a, latit_a, longit_b, latit_b):
 
 udf_get_distance = func.udf(get_distance, DoubleType())
 
-MONGO_URL = "mongodb://root:pass12345@localhost:27017/WarsawPublicTransport.Stops?authSource=admin"
-
-MONGO_URL2 = "mongodb://root:pass12345@localhost:27017/WarsawPublicTransport.Calendar?authSource=admin"
+MONGO_URL_STOPS = "mongodb://root:pass12345@localhost:27017/WarsawPublicTransport.Stops?authSource=admin"
+MONGO_URL_CALENDAR = "mongodb://root:pass12345@localhost:27017/WarsawPublicTransport.Calendar?authSource=admin"
+MONGO_URL_TIME_TABLE = "mongodb://root:pass12345@localhost:27017/WarsawPublicTransport.TimeTable?authSource=admin"
 
 spark = SparkSession \
     .builder \
     .appName("WarsawTransportation") \
-    .config("spark.mongodb.input.uri", MONGO_URL) \
-    .config("spark.mongodb.output.uri", MONGO_URL) \
+    .config("spark.mongodb.input.uri", MONGO_URL_STOPS) \
+    .config("spark.mongodb.output.uri", MONGO_URL_STOPS) \
     .config('spark.jars.packages', 'org.mongodb.spark:mongo-spark-connector_2.12:3.0.1') \
     .getOrCreate()
 
@@ -73,7 +73,7 @@ routes_coord.orderBy("line_nr", "route_nr", "min_time")
 
 # CALENDAR
 mongo_calendar = spark.read \
-    .option("uri", MONGO_URL2) \
+    .option("uri", MONGO_URL_CALENDAR) \
     .format("com.mongodb.spark.sql.DefaultSource") \
     .load()
 
@@ -88,14 +88,15 @@ calendar.createOrReplaceTempView("calendar")
 
 
 # TIMETABLE INFO
-timetable = spark \
-    .read \
-    .option("multiLine", "True") \
-    .format("json") \
-    .load("tram_data/timetable/*.json") \
+timetable = spark.read \
+    .option("uri", MONGO_URL_TIME_TABLE) \
+    .format("com.mongodb.spark.sql.DefaultSource") \
+    .load()
+
+timetable = timetable \
     .withColumn("stop_nr", func.concat(func.col("unit"), func.col("post")))
 
-timetable_stop = timetable.alias("tt") \
+timetable_stop = timetable.alias("tt")  \
     .join(stops, timetable.stop_nr == stops.stop_nr) \
     .select(func.col("line").alias("Lines"), func.col("route").alias("Route"),
             func.col("tt.stop_nr").alias("StopNo"), func.col("departure_time").alias("DepTime"),
@@ -125,6 +126,7 @@ trams_stops = trams \
 trams_stops.orderBy("Lines", "Brigade", "Time")
 trams_stops.createOrReplaceTempView("trams_stops")
 
+
 results = spark.sql(
     "SELECT distinct t.*, ti.Lines AS TT_Lines, date_format(ti.DepTime, 'HH:mm:ss') AS DepTime, ti.StopNo, ti.DayType, ti.Route , ti.Order, " +
     "(unix_timestamp(to_timestamp(t.CurrTramTime))-unix_timestamp(to_timestamp(ti.DepTime))) AS Delay " +
@@ -138,7 +140,6 @@ results = spark.sql(
     "and t.lowerTime < ti.DepTime " +
     "and t.upperTime > ti.DepTime ")
 results = results.sort("Lines", "VehicleNumber", "CurrTramTime", "Brigade", "distance", "DepTime", "Route", "Order")
-results.show(1000)
 
 
 # Find previous stop
@@ -150,7 +151,7 @@ previous_stops = results.withColumn("PrevStop",
                                                     func.last(func.col("PrevStop"), True).over(my_window))
                      .otherwise(func.col("PrevStop"))) \
          .drop(func.col("PrevStop"))
-previous_stops.sort("Lines", "VehicleNumber", "CurrTramTime", "Brigade", "distance", "DepTime", "Route", "Order").show()
+previous_stops.sort("Lines", "VehicleNumber", "CurrTramTime", "Brigade", "distance", "DepTime", "Route", "Order")
 previous_stops.createOrReplaceTempView("previous_stops")
 
 routes_window = Window.partitionBy().orderBy("line_nr", "route_nr", "min_time")
@@ -162,7 +163,7 @@ routes_order = routes_coord.select("line_nr", "route_nr", "stop_nr", "StopName",
                 .otherwise(func.col("Prev_Stop_Route"))) \
     .drop(func.col("Prev_Stop_Route")) \
     .distinct()
-routes_order.orderBy("line_nr", "route_nr", "min_time").show(100)
+routes_order.orderBy("line_nr", "route_nr", "min_time")
 routes_order.createOrReplaceTempView("routes_order")
 
 # Find tram direction based on previous stop
@@ -173,11 +174,10 @@ direction = spark.sql(
     "ON ps.Lines == ro.line_nr " +
     "and ps.StopNo == ro.stop_nr " +
     "and ps.PrevStopCorrected == ro.PrevCorrected ")
-direction.filter("Direction is not NULL").orderBy("Lines", "VehicleNumber", "LowerTime").show(1000)
+direction.filter("Direction is not NULL").orderBy("Lines", "VehicleNumber", "LowerTime")
 
 
 # Send data to SQL Server database
-
 def write_data_to_sql_server(database, table, data_frame):
     user = "sa"
     password = "Pass1234!"
@@ -194,12 +194,26 @@ def write_data_to_sql_server(database, table, data_frame):
         .save()
 
 
-stops_data = stops["stop_nr","StopName"].distinct()
-tram_data = trams_stops["Lines", "VehicleNumber", "Brigade"].distinct()
-calendar_data = calendar["DayType", "day"]
-fact_data = direction["StopNo", "VehicleNumber", "Date", "DepTime", "Delay"]
+stops_data = stops["stop_nr", "StopName"].distinct()
+stops_data = stops_data.withColumn("stop_nr", stops_data["stop_nr"].cast(IntegerType()))
 
-# write_data_to_sql_server("WarsawPublicTransport", "Stops", stops_data)
-# write_data_to_sql_server("WarsawPublicTransport", "Trams", tram_data)
-# write_data_to_sql_server("WarsawPublicTransport", "Calendar", calendar_data)
+tram_data = trams_stops["Lines", "VehicleNumber", "Brigade"].distinct()
+tram_data = tram_data.withColumn("Lines", tram_data["Lines"].cast(IntegerType())) \
+                        .withColumn("Brigade", tram_data["Brigade"].cast(IntegerType()))
+
+calendar_data = calendar["DayType", "day"]
+calendar_data = calendar_data.withColumn("day", func.to_date(calendar_data["day"], "yyyy-MM-dd"))
+
+fact_data = direction["StopNo", "VehicleNumber", "Date", "DepTime", "Delay"]
+fact_data = fact_data.withColumn("StopNo", fact_data["StopNo"].cast(IntegerType())) \
+                    .withColumn("Date", func.to_date(fact_data["Date"], "yyyy-MM-dd")) \
+
+
 write_data_to_sql_server("WarsawPublicTransport", "Delays", fact_data)
+
+
+'''''
+write_data_to_sql_server("WarsawPublicTransport", "Stops", stops_data)
+write_data_to_sql_server("WarsawPublicTransport", "Trams", tram_data)
+write_data_to_sql_server("WarsawPublicTransport", "Calendar", calendar_data)
+'''''
