@@ -1,7 +1,7 @@
 from Calendar import Calendar
 import os
 import datetime
-import pymongo
+from routesProcessing import load_objects_to_MongoDB
 
 directory = os.fsencode('calendar/')
 
@@ -9,7 +9,7 @@ current_date = str(datetime.datetime.today()).split()[0]
 
 
 def extract_lines():
-    calendar_days= []
+    calendar_days = []
     file_name = os.listdir('./ftp/')[0]
     with open(f"./ftp/{file_name}", "rt", encoding="utf8") as file:
         for line in file:
@@ -20,7 +20,7 @@ def extract_lines():
                     try:
                         line_data = line.split()
                         new_calendar_day = Calendar(line_data[0], line_data[2:])
-                        calendar_days.append(new_calendar_day)
+                        calendar_days.append(new_calendar_day.convert_to_json())
                         f.write(line)
                         line = next(file)
                     except StopIteration:
@@ -34,19 +34,13 @@ def extract_lines():
         return calendar_days
 
 
-def load_calendar_to_MongoDB(calendar_days: list[Calendar]):
-    my_client = pymongo.MongoClient("mongodb://root:pass12345@localhost:27017/")
-    my_database = my_client["WarsawPublicTransport"]
-    my_collection = my_database["Calendar"]
-
-    my_collection.drop()
-    for calendar in calendar_days:
-        my_collection.insert_one(calendar.convert_to_json())
-
-    cursor = my_collection.find()
-    for record in cursor:
-        print(record)
+def main():
+    calendar_days = extract_lines()
+    connection = "mongodb://root:pass12345@localhost:27017/"
+    database = "WarsawPublicTransport"
+    collection = "Calendar"
+    load_objects_to_MongoDB(calendar_days, connection,  database, collection)
 
 
-calendar_days = extract_lines()
-load_calendar_to_MongoDB(calendar_days)
+if __name__ == "__main__":
+    main()
