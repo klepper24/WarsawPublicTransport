@@ -23,9 +23,17 @@ def get_distance(longit_a, latit_a, longit_b, latit_b):
 
 udf_get_distance = func.udf(get_distance, DoubleType())
 
+
+def read_new_collection(collection_name):
+    mongo_url = f"mongodb://root:pass12345@localhost:27017/WarsawPublicTransport.{collection_name}?authSource=admin"
+    new_collection = spark.read \
+        .option("uri", mongo_url) \
+        .format("com.mongodb.spark.sql.DefaultSource") \
+        .load()
+    return new_collection
+
+
 MONGO_URL_STOPS = "mongodb://root:pass12345@localhost:27017/WarsawPublicTransport.Stops?authSource=admin"
-MONGO_URL_CALENDAR = "mongodb://root:pass12345@localhost:27017/WarsawPublicTransport.Calendar?authSource=admin"
-MONGO_URL_TIME_TABLE = "mongodb://root:pass12345@localhost:27017/WarsawPublicTransport.TimeTable?authSource=admin"
 
 spark = SparkSession \
     .builder \
@@ -50,12 +58,7 @@ stops = mongo_stops \
 
 
 # ROUTES INFO
-routes_json = spark \
-    .read \
-    .option("multiLine", "True") \
-    .format("json") \
-    .load("tram_data/routes/routes_json.json")
-
+routes_json = read_new_collection("Routes")
 exploded_routes_json = routes_json \
     .withColumn("routes_details", func.explode(func.col("routes"))).drop(func.col("routes")) \
     .select("line_nr", "number_of_routes", "routes_details.number_of_stops", "routes_details.route_nr",
@@ -66,18 +69,12 @@ routes = exploded_routes_json \
     .select("line_nr", "number_of_routes", "number_of_stops", "route_nr", "stops_details.stop_nr",
             func.col("stops_details.stop_name").alias("StopName"), "stops_details.street", "stops_details.min_time",
             "stops_details.max_time")
-
 routes_coord = routes.alias("r").join(stops.alias("s"), routes.stop_nr == stops.stop_nr) \
     .select("r.*", "s.Lat", "s.Lon", func.col("s.unit").alias("Unit"))
 routes_coord.orderBy("line_nr", "route_nr", "min_time")
 
 # CALENDAR
-mongo_calendar = spark.read \
-    .option("uri", MONGO_URL_CALENDAR) \
-    .format("com.mongodb.spark.sql.DefaultSource") \
-    .load()
-
-
+mongo_calendar = read_new_collection("Calendar")
 calendar = mongo_calendar \
     .withColumn("DayType", func.when(func.array_contains(func.col("day_types"), "DP") == True, "DP")
     .when(func.array_contains(func.col("day_types"), "N7") == True, "DS")
@@ -88,11 +85,7 @@ calendar.createOrReplaceTempView("calendar")
 
 
 # TIMETABLE INFO
-timetable = spark.read \
-    .option("uri", MONGO_URL_TIME_TABLE) \
-    .format("com.mongodb.spark.sql.DefaultSource") \
-    .load()
-
+timetable = read_new_collection("TimeTable")
 timetable = timetable \
     .withColumn("stop_nr", func.concat(func.col("unit"), func.col("post")))
 
@@ -210,7 +203,6 @@ fact_data = fact_data.withColumn("StopNo", fact_data["StopNo"].cast(IntegerType(
 
 
 write_data_to_sql_server("WarsawPublicTransport", "Delays", fact_data)
-
 
 '''''
 write_data_to_sql_server("WarsawPublicTransport", "Stops", stops_data)
