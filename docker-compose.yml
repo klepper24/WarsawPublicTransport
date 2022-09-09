@@ -303,14 +303,12 @@ services:
       - internal-network    
         
   ms-sql:
-    image: mcr.microsoft.com/mssql/server:2019-latest
+    build: ./mssql
+    #image: mcr.microsoft.com/mssql/server:2019-latest
     ports:
       - 1433:1433
     volumes:
       - ./mssql/data:/var/lib/mssqlql/data
-    environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=mssql1Ipw
     restart: always
     networks:
       - internal-network       
