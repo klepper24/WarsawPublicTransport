@@ -1,18 +1,51 @@
+from datetime import datetime, timedelta
+
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
-from datetime import datetime, timedelta
-from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+#from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
+from airflow.providers.http.sensors.http import HttpSensor
+from airflow.operators.http_operator import SimpleHttpOperator
+from airflow.operators.python_operator import PythonOperator
+from airflow.models import Variable
+
+
 ###############################################
 # Parameters
 ###############################################
 spark_master = "spark://spark:7077"
-csv_file = "/opt/spark/execution_scripts/account.csv"
+now = datetime.now()
+api_key = Variable.get("api_key")
+resource_id = 'f2e5503e927d-4ad3-9500-4ab9e55deb59'
+out_dir = '/opt/spark/execution_scripts/'
+tram_folder = ''
+
+
+def save_tram_gps(ti):
+    to_zone = tz.gettz('Europe/Warsaw')
+    today_time = datetime.now().astimezone(to_zone)
+    
+    date = today_time.strftime("%Y%m%d")
+    time = today_time.strftime("%H%M%S")
+    tram_folder = f'{out_dir}{date}/'
+    
+    url = f'https://api.um.warszawa.pl/api/action/busestrams_get/?resource_id={resource_id}&type=2&apikey={api_key}'
+    r = requests.get(url)
+    status = r.status_code
+    logging.info(f'Status: {status}')
+    if status == 200:
+        json_response = r.json()
+
+        # saving json to file
+        filename = f'{tram_folder}tram{time}.json'
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(json_response, f, ensure_ascii=False, indent=4)
+            
 
 ###############################################
 # DAG Definition
 ###############################################
-now = datetime.now()
 
 default_args = {
     "owner": "airflow",
@@ -25,24 +58,37 @@ default_args = {
     "retry_delay": timedelta(minutes=1)
 }
 
-dag = DAG(
+with DAG(
         dag_id="delays_processing", 
         description="This DAG runs a Pyspark app that uses modules.",
         default_args=default_args, 
         schedule_interval=timedelta(1)
-    )
+) as dag:
 
 start = DummyOperator(task_id="start", dag=dag)
 
-spark_job = SparkSubmitOperator(
-    task_id="spark_job",
-    application="/opt/spark/execution_scripts/delays_count.py", # Spark application path created in airflow and spark cluster
-    name="hello-world-module",
-    conn_id="spark_default",
-    conf={"spark.master":spark_master},
-    packages="org.mongodb.spark:mongo-spark-connector_2.12:3.0.1,com.microsoft.sqlserver:mssql-jdbc:11.2.0.jre8",
-    dag=dag)
-    
-end = DummyOperator(task_id="end", dag=dag)
+    task_is_api_active = HttpSensor(
+        task_id='is_api_active',
+        http_conn_id='url_ztm_gps',
+        endpoint='api/action/busestrams_get/',
+        request_params={'type': '2', 'resource_id': resource_id, 'apikey' : api_key}
+    )
 
-start >> spark_job >> end
+    task_save_tram_gps = PythonOperator(
+        task_id="save_tram_gps",
+        python_callable=save_tram_gps
+    ) 
+
+    spark_job = SparkSubmitOperator(
+        task_id="spark_job",
+        application="/opt/spark/execution_scripts/delays_proc.py", # Spark application path created in airflow and spark cluster
+        application_args=[tram_folder]
+        name="delays processing",
+        conn_id="spark_default",
+        conf={"spark.master":spark_master},
+        packages="org.mongodb.spark:mongo-spark-connector_2.12:3.0.1,com.microsoft.sqlserver:mssql-jdbc:11.2.0.jre8",
+        dag=dag)
+    
+    end = DummyOperator(task_id="end", dag=dag)
+
+    start >> task_is_api_active >> task_save_tram_gps >> spark_job >> end
