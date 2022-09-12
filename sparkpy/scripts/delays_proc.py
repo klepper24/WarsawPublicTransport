@@ -124,6 +124,7 @@ timetable_stop.createOrReplaceTempView("timetable")
 
 # TRAM INFO
 #tram_json = spark.read.option("multiLine", "True").format("json").load(["tram_data/20220811/*.json"])
+print(sys.argv[1])
 tram_json = spark.read.option("multiLine", "True").format("json").load([f"{sys.argv[1]}*.json"])
 exploded_tram_json = tram_json.withColumn("details", func.explode(func.col("result"))).drop("result")
 trams = exploded_tram_json \
