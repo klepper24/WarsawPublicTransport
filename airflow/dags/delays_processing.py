@@ -1,12 +1,16 @@
 from datetime import datetime, timedelta
+from dateutil import tz
+import requests
+import os
+import json
 
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
-#from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from airflow.providers.http.sensors.http import HttpSensor
 from airflow.operators.http_operator import SimpleHttpOperator
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators.bash_operator import BashOperator
 from airflow.models import Variable
 
 
@@ -14,25 +18,23 @@ from airflow.models import Variable
 # Parameters
 ###############################################
 spark_master = "spark://spark:7077"
-now = datetime.now()
 api_key = Variable.get("api_key")
 resource_id = 'f2e5503e927d-4ad3-9500-4ab9e55deb59'
 out_dir = '/opt/spark/execution_scripts/'
-tram_folder = ''
+
+now = datetime.now()
+to_zone = tz.gettz('Europe/Warsaw')
+today_time = datetime.now().astimezone(to_zone)
+date = today_time.strftime("%Y%m%d")
+time = today_time.strftime("%H%M%S")
+
+tram_folder = f'{out_dir}{date}/'
 
 
-def save_tram_gps(ti):
-    to_zone = tz.gettz('Europe/Warsaw')
-    today_time = datetime.now().astimezone(to_zone)
-    
-    date = today_time.strftime("%Y%m%d")
-    time = today_time.strftime("%H%M%S")
-    tram_folder = f'{out_dir}{date}/'
-    
+def save_tram_gps(ti): 
     url = f'https://api.um.warszawa.pl/api/action/busestrams_get/?resource_id={resource_id}&type=2&apikey={api_key}'
     r = requests.get(url)
     status = r.status_code
-    logging.info(f'Status: {status}')
     if status == 200:
         json_response = r.json()
 
@@ -65,7 +67,7 @@ with DAG(
         schedule_interval=timedelta(1)
 ) as dag:
 
-start = DummyOperator(task_id="start", dag=dag)
+    start = DummyOperator(task_id="start", dag=dag)
 
     task_is_api_active = HttpSensor(
         task_id='is_api_active',
@@ -82,13 +84,18 @@ start = DummyOperator(task_id="start", dag=dag)
     spark_job = SparkSubmitOperator(
         task_id="spark_job",
         application="/opt/spark/execution_scripts/delays_proc.py", # Spark application path created in airflow and spark cluster
-        application_args=[tram_folder]
+        application_args=[tram_folder],
         name="delays processing",
         conn_id="spark_default",
         conf={"spark.master":spark_master},
         packages="org.mongodb.spark:mongo-spark-connector_2.12:3.0.1,com.microsoft.sqlserver:mssql-jdbc:11.2.0.jre8",
         dag=dag)
+        
+    task_move_to_archive = BashOperator(
+        task_id="move_to_archive",
+        bash_command=f'mkdir -p {out_dir}ARCHIVE/ & mv {tram_folder}* {out_dir}ARCHIVE/ & rm -R {tram_folder}'
+    )        
     
     end = DummyOperator(task_id="end", dag=dag)
 
-    start >> task_is_api_active >> task_save_tram_gps >> spark_job >> end
+    start >> task_is_api_active >> task_save_tram_gps >> spark_job >> task_move_to_archive >> end
