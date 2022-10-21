@@ -14,11 +14,9 @@ RUN apt-get install unzip -y && \
 # Set JAVA_HOME
 RUN export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
+
 USER airflow
-RUN pip install --no-cache-dir pymongo==3.6.0
-RUN pip install --no-cache-dir wget==3.2
-RUN pip install --no-cache-dir py7zr==0.20.0
-RUN pip install --no-cache-dir requests==2.28.1
-RUN pip install --no-cache-dir dnspython==1.13.0
-RUN pip install --no-cache-dir apache-airflow-providers-mongo==2.3.3
-RUN pip install --no-cache-dir apache-airflow-providers-apache-spark==3.0.0
+
+COPY requirements.txt /opt/app/requirements.txt
+WORKDIR /opt/app
+RUN pip install -r requirements.txt
