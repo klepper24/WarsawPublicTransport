@@ -82,16 +82,16 @@ venv.bak/
 # Additionally
 .DS_Store
 
-airflow/dags/data/*
-!airflow/dags/data/.gitkeep 
+orchestrator/dags/data/*
+!orchestrator/dags/data/.gitkeep 
 
-airflow/logs/*
-!airflow/logs/scheduler
-airflow/logs/scheduler/*
-!airflow/logs/scheduler/.gitkeep 
+orchestrator/logs/*
+!orchestrator/logs/scheduler
+orchestrator/logs/scheduler/*
+!orchestrator/logs/scheduler/.gitkeep 
 
-airflow/plugins/*
-!airflow/plugins/.gitkeep 
+orchestrator/plugins/*
+!orchestrator/plugins/.gitkeep 
 
-mongo/database/*
-!mongo/database/.gitkeep 
+db/database/*
+!db/database/.gitkeep 
