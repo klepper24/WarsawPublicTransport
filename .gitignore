@@ -86,7 +86,9 @@ airflow/dags/data/*
 !airflow/dags/data/.gitkeep 
 
 airflow/logs/*
-!airflow/logs/.gitkeep 
+!airflow/logs/scheduler
+airflow/logs/scheduler/*
+!airflow/logs/scheduler/.gitkeep 
 
 airflow/plugins/*
 !airflow/plugins/.gitkeep 
