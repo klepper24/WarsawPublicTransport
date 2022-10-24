@@ -18,9 +18,9 @@ from airflow.operators.http_operator import SimpleHttpOperator
 from airflow.models import Variable
 
 sys.path.insert(0,os.path.abspath(os.path.dirname(__file__)))
-from scripts.TimeTable import TimeTable
-from scripts.Calendar import Calendar
-from scripts.Stop import Stop
+from modules.TimeTable import TimeTable
+from modules.Calendar import Calendar
+from modules.Stop import Stop
 
 ###############################################
 # Parameters

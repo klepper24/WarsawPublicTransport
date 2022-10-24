@@ -45,7 +45,7 @@ x-airflow-common:
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
   #image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.3.0}
-  build: ./airflow
+  build: ./orchestrator
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
@@ -54,14 +54,14 @@ x-airflow-common:
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKEND: 'airflow.api.auth.backend.basic_auth'
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
   volumes:
-    - ./airflow/dags:/opt/airflow/dags
-    - ./airflow/logs:/opt/airflow/logs
-    - ./airflow/plugins:/opt/airflow/plugins
-    - ./sparkpy/scripts:/opt/spark/execution_scripts    
+    - ./orchestrator/dags:/opt/airflow/dags
+    - ./orchestrator/logs:/opt/airflow/logs
+    - ./orchestrator/plugins:/opt/airflow/plugins
+    - ./processor/scripts:/opt/spark/execution_scripts    
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
@@ -248,7 +248,7 @@ services:
       _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
     user: "0:0"
     volumes:
-      - ./airflow:/sources
+      - ./orchestrator:/sources
     networks:
       - internal-network      
 
@@ -286,7 +286,7 @@ services:
       - internal-network
       
   mongo-python:
-    build: ./mongo
+    build: ./db
     environment:
       - PUID=1000
       - PGID=1000
@@ -296,25 +296,25 @@ services:
     ports:
       - 27017:27017
     volumes:
-      - ./mongo/database:/data/db
-      - ./mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+      - ./db/database:/data/db
+      - ./db/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
     restart: always
     networks:
       - internal-network    
         
   ms-sql:
-    build: ./mssql
+    build: ./dw
     #image: mcr.microsoft.com/mssql/server:2019-latest
     ports:
       - 1433:1433
     volumes:
-      - ./mssql/data:/var/lib/mssqlql/data
+      - ./dw/data:/var/lib/mssqlql/data
     restart: always
     networks:
       - internal-network       
           
   spark:
-    build: ./sparkpy
+    build: ./processor
     #image: bitnami/spark:3.3.0
     hostname: spark
     environment:
@@ -328,12 +328,13 @@ services:
       - 4041:4040
       - 7077:7077
     volumes:
-      - ./sparkpy/scripts:/opt/spark/execution_scripts
+      - ./processor/scripts:/opt/spark/execution_scripts
+    restart: always
     networks:
         - internal-network       
                       
   spark-worker:
-    build: ./sparkpy
+    build: ./processor
     #image: bitnami/spark:3.3.0
     environment:
       - SPARK_MODE=worker
@@ -345,7 +346,8 @@ services:
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no  
     volumes:
-      - ./sparkpy/scripts:/opt/spark/execution_scripts
+      - ./processor/scripts:/opt/spark/execution_scripts
+    restart: always
     networks:
         - internal-network             
 
