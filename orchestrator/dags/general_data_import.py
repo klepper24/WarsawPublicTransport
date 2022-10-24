@@ -249,7 +249,7 @@ def create_routes_json(input_file):
         for line in file:
             if 'Linia' in line and 'TRAMWAJOWA' in line and line.split()[1] not in ['T', '36']:
                 y = line.split()
-                line_nr = int(y[1])
+                line_nr = y[1]
                 line = next(file)
                 z = line.split()
                 number_of_routes = int(z[1])
@@ -380,12 +380,6 @@ with DAG(
         python_callable=load_calendar_to_MongoDB
     )  
 
-    task_is_api_active = HttpSensor(
-        task_id='is_api_active',
-        http_conn_id='url_ztm_gps',
-        endpoint='api/action/dbstore_get',
-        request_params={'id': resource_id, 'apikey' : api_key}
-    )
     
     task_load_stops_to_MongoDB = PythonOperator(
         task_id="load_stops_to_MongoDB",
@@ -405,7 +399,7 @@ with DAG(
     end = DummyOperator(task_id="end", dag=dag)
 
     start >> task_download_general_ztm_data >> task_extract_lines >> task_load_timetable_to_MongoDB \
-    >> task_remove_files >> task_load_calendar_to_MongoDB >> task_is_api_active >> task_load_stops_to_MongoDB \
+    >> task_remove_files >> task_load_calendar_to_MongoDB >> task_load_stops_to_MongoDB \
     >> task_extract_routes_lines >> task_load_routes_to_MongoDB >> end
     
     

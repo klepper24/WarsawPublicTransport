@@ -69,12 +69,12 @@ with DAG(
 
     start = DummyOperator(task_id="start", dag=dag)
 
-    task_is_api_active = HttpSensor(
-        task_id='is_api_active',
-        http_conn_id='url_ztm_gps',
-        endpoint='api/action/busestrams_get/',
-        request_params={'type': '2', 'resource_id': resource_id, 'apikey' : api_key}
-    )
+#    task_is_api_active = HttpSensor(
+#        task_id='is_api_active',
+#        http_conn_id='url_ztm_gps',
+#        endpoint='api/action/busestrams_get/',
+#        request_params={'type': '2', 'resource_id': resource_id, 'apikey' : api_key}
+#    )
 
     task_save_tram_gps = PythonOperator(
         task_id="save_tram_gps",
@@ -98,4 +98,4 @@ with DAG(
     
     end = DummyOperator(task_id="end", dag=dag)
 
-    start >> task_is_api_active >> task_save_tram_gps >> spark_job >> task_move_to_archive >> end
+    start >> task_save_tram_gps >> spark_job >> task_move_to_archive >> end
