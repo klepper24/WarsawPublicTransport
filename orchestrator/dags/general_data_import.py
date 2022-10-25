@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import List, Dict
 import sys
 import os
 import json
@@ -45,7 +46,6 @@ def download_general_ztm_data(ti) -> None:
     download timetable .txt file from ftp server
     change encoding from ansi to utf8
 
-    :return str: the name of the latest timetable file
     """
     ftp = wget.download(ztm_general_link, out=out_dir)
     with open(ftp) as f:
@@ -97,7 +97,7 @@ def convert_to_time(str_hour: str) -> datetime.date:
     return hour
 
 
-def extract_timetable() -> list:
+def extract_timetable() -> List[TimeTable]:
     time_table = []
     for file in os.listdir(out_dir):
         filename = os.fsdecode(file)
@@ -142,7 +142,7 @@ def load_timetable_to_MongoDB() -> None:
         my_collection.insert_one(timetable.convert_to_json()) 
 
 
-def extract_calendar_lines(general_file_name: str) -> list:
+def extract_calendar_lines(general_file_name: str) -> List[Calendar]:
     calendar_days= []
     current_date = str(datetime.today()).split()[0]
     with open(f"{out_dir}{general_file_name}", "rt", encoding="utf8") as file:
@@ -185,7 +185,7 @@ def get_json(link: str) -> json:
     return json.loads(response.text)
     
         
-def create_stops_list() -> list:
+def create_stops_list() -> List[Stop]:
     stops = []
     json_string = get_json(f'https://api.um.warszawa.pl/api/action/dbstore_get/?id={resource_id}&apikey={api_key}')
     for stop_values in json_string['result']:
@@ -243,7 +243,7 @@ def extract_routes_lines(ti) -> None:
     ti.xcom_push(key="routes_output_file", value=routes_output_file)
 
 
-def create_routes_json(input_file: str) -> list:
+def create_routes_json(input_file: str) -> List[Dict]:
     routes_json = []
     with open(input_file, "rt", encoding="utf-8") as file:
         for line in file:
