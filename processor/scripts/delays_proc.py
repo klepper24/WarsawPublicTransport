@@ -1,4 +1,5 @@
 import sys
+import pandas as pd
 from math import radians, cos, sin, asin, sqrt
 
 from pyspark.sql import SparkSession
@@ -10,7 +11,7 @@ mongo_host = 'git_mongo-python_1'
 mssql_host = 'git_ms-sql_1'
 
 # harvesine method in meters
-def get_distance(longit_a, latit_a, longit_b, latit_b):
+def get_distance(longit_a: float, latit_a: float, longit_b: float, latit_b: float) -> float:
     # Transform to radians
     longit_a, latit_a, longit_b, latit_b = map(radians, [longit_a, latit_a, longit_b, latit_b])
     dist_longit = longit_b - longit_a
@@ -28,7 +29,7 @@ def get_distance(longit_a, latit_a, longit_b, latit_b):
 udf_get_distance = func.udf(get_distance, DoubleType())
 
 
-def read_new_collection(collection_name):
+def read_new_collection(collection_name: str) -> pd.DataFrame:
     mongo_url = f"mongodb://root:pass12345@{mongo_host}:27017/WarsawPublicTransport.{collection_name}?authSource=admin"
     new_collection = spark.read \
         .option("uri", mongo_url) \
@@ -37,7 +38,7 @@ def read_new_collection(collection_name):
     return new_collection
     
 # Send data to SQL Server database
-def write_data_to_sql_server(database, table_name, data_frame):
+def write_data_to_sql_server(database: str, table_name: str, data_frame: pd.DataFrame) -> None:
     username = "SA"
     #password = "Pass1234!"
     password = "mssql1Ipw"
