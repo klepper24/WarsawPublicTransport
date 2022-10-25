@@ -31,7 +31,7 @@ time = today_time.strftime("%H%M%S")
 tram_folder = f'{out_dir}{date}/'
 
 
-def save_tram_gps(ti): 
+def save_tram_gps(ti) -> None:
     url = f'https://api.um.warszawa.pl/api/action/busestrams_get/?resource_id={resource_id}&type=2&apikey={api_key}'
     r = requests.get(url)
     status = r.status_code

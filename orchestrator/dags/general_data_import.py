@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import List, Dict
 import sys
 import os
 import json
@@ -40,12 +41,11 @@ now = datetime.now()
 ###############################################
 # Python functions
 ###############################################
-def download_general_ztm_data(ti):
+def download_general_ztm_data(ti) -> None:
     """
     download timetable .txt file from ftp server
     change encoding from ansi to utf8
 
-    :return str: the name of the latest timetable file
     """
     ftp = wget.download(ztm_general_link, out=out_dir)
     with open(ftp) as f:
@@ -68,7 +68,7 @@ def download_general_ztm_data(ti):
     ti.xcom_push(key="general_file_name", value=general_file_name)
         
         
-def extract_timetable_lines(ti):
+def extract_timetable_lines(ti) -> None:
     general_file_name=ti.xcom_pull(key='general_file_name')
     with open(f'{out_dir}{general_file_name}', "rt", encoding="utf8") as file:
         for line in file:
@@ -89,7 +89,7 @@ def extract_timetable_lines(ti):
                 continue    
 
 
-def convert_to_time(str_hour: str):
+def convert_to_time(str_hour: str) -> datetime.date:
     if '24.' not in str_hour:
         hour = datetime.strptime(str_hour, '%H.%M').time()
     else:
@@ -97,7 +97,7 @@ def convert_to_time(str_hour: str):
     return hour
 
 
-def extract_timetable():
+def extract_timetable() -> List[TimeTable]:
     time_table = []
     for file in os.listdir(out_dir):
         filename = os.fsdecode(file)
@@ -131,7 +131,7 @@ def extract_timetable():
     return time_table     
 
 
-def load_timetable_to_MongoDB():
+def load_timetable_to_MongoDB() -> None:
     my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{mongo_host}:27017/")
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Timetable"]
@@ -142,7 +142,7 @@ def load_timetable_to_MongoDB():
         my_collection.insert_one(timetable.convert_to_json()) 
 
 
-def extract_calendar_lines(general_file_name):
+def extract_calendar_lines(general_file_name: str) -> List[Calendar]:
     calendar_days= []
     current_date = str(datetime.today()).split()[0]
     with open(f"{out_dir}{general_file_name}", "rt", encoding="utf8") as file:
@@ -168,7 +168,7 @@ def extract_calendar_lines(general_file_name):
         return calendar_days
 
 
-def load_calendar_to_MongoDB(ti):
+def load_calendar_to_MongoDB(ti) -> None:
     my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{mongo_host}:27017/")
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Calendar"]
@@ -180,12 +180,12 @@ def load_calendar_to_MongoDB(ti):
         my_collection.insert_one(calendar.convert_to_json())
 
 
-def get_json(link: str):
+def get_json(link: str) -> json:
     response = requests.get(link)
     return json.loads(response.text)
     
         
-def create_stops_list():
+def create_stops_list() -> List[Stop]:
     stops = []
     json_string = get_json(f'https://api.um.warszawa.pl/api/action/dbstore_get/?id={resource_id}&apikey={api_key}')
     for stop_values in json_string['result']:
@@ -204,7 +204,7 @@ def create_stops_list():
     return stops
 
 
-def load_stops_to_MongoDB():
+def load_stops_to_MongoDB() -> None:
     my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{mongo_host}:27017/")
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Stops"]
@@ -217,7 +217,7 @@ def load_stops_to_MongoDB():
     my_collection.create_index([("coordinates", pymongo.GEOSPHERE)])        
   
 
-def extract_routes_lines(ti):
+def extract_routes_lines(ti) -> None:
     general_file_name=ti.xcom_pull(key='general_file_name')
     routes_output_file = "routes_file.txt"
     with open(f"{out_dir}{general_file_name}", "rt", encoding="utf-8") as file:
@@ -243,7 +243,7 @@ def extract_routes_lines(ti):
     ti.xcom_push(key="routes_output_file", value=routes_output_file)
 
 
-def create_routes_json(input_file):
+def create_routes_json(input_file: str) -> List[Dict]:
     routes_json = []
     with open(input_file, "rt", encoding="utf-8") as file:
         for line in file:
@@ -323,7 +323,7 @@ def create_routes_json(input_file):
     return routes_json
 
 
-def load_routes_to_MongoDB(ti):
+def load_routes_to_MongoDB(ti) -> None:
     my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{mongo_host}:27017/")
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Routes"]
