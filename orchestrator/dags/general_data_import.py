@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 from typing import List, Dict
+from models import TimeTable, Stop, Calendar
+
 import sys
 import os
 import json
@@ -18,10 +20,8 @@ from airflow.providers.http.sensors.http import HttpSensor
 from airflow.operators.http_operator import SimpleHttpOperator
 from airflow.models import Variable
 
-sys.path.insert(0,os.path.abspath(os.path.dirname(__file__)))
-from modules.TimeTable import TimeTable
-from modules.Calendar import Calendar
-from modules.Stop import Stop
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
 
 ###############################################
 # Parameters
@@ -69,7 +69,7 @@ def download_general_ztm_data(ti) -> None:
         
         
 def extract_timetable_lines(ti) -> None:
-    general_file_name=ti.xcom_pull(key='general_file_name')
+    general_file_name = ti.xcom_pull(key='general_file_name')
     with open(f'{out_dir}{general_file_name}', "rt", encoding="utf8") as file:
         for line in file:
             if "Linia:" in line and len(line.split()[1]) < 3 and line.split()[1].isdecimal():
@@ -120,7 +120,6 @@ def extract_timetable() -> List[TimeTable]:
                         hour, stop = line.split()
                         departure_time = convert_to_time(hour)
                         route, day_type, _ = stop.split('/')
-                        #print(line_number)
                         new_time_table = TimeTable(int(line_number), route, day_type, unit, post, str(departure_time), n)
                         time_table.append(new_time_table)
                         line = next(f)
@@ -139,7 +138,7 @@ def load_timetable_to_MongoDB() -> None:
     my_collection.drop()
     timetables = extract_timetable()
     for timetable in timetables:
-        my_collection.insert_one(timetable.convert_to_json()) 
+        my_collection.insert_one(timetable.obj_to_dict()) 
 
 
 def extract_calendar_lines(general_file_name: str) -> List[Calendar]:
@@ -174,10 +173,10 @@ def load_calendar_to_MongoDB(ti) -> None:
     my_collection = my_database["Calendar"]
 
     my_collection.drop()
-    general_file_name=ti.xcom_pull(key='general_file_name')
+    general_file_name = ti.xcom_pull(key='general_file_name')
     calendar_days = extract_calendar_lines(general_file_name)
     for calendar in calendar_days:
-        my_collection.insert_one(calendar.convert_to_json())
+        my_collection.insert_one(calendar.obj_to_dict())
 
 
 def get_json(link: str) -> json:
@@ -212,13 +211,13 @@ def load_stops_to_MongoDB() -> None:
     my_collection.drop()
     stops_list = create_stops_list()
     for stop in stops_list:
-        my_collection.insert_one(stop.convert_to_json())      
+        my_collection.insert_one(stop.obj_to_dict())      
         
     my_collection.create_index([("coordinates", pymongo.GEOSPHERE)])        
   
 
 def extract_routes_lines(ti) -> None:
-    general_file_name=ti.xcom_pull(key='general_file_name')
+    general_file_name = ti.xcom_pull(key='general_file_name')
     routes_output_file = "routes_file.txt"
     with open(f"{out_dir}{general_file_name}", "rt", encoding="utf-8") as file:
         f = open(routes_output_file, "w", encoding='utf-8')
