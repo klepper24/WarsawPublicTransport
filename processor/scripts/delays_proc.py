@@ -75,10 +75,9 @@ spark = SparkSession \
 mongo_stops = spark \
     .read.format("mongo").load()
 stops = mongo_stops \
-    .withColumn("Lon", mongo_stops["coordinates"].getItem(1)) \
-    .withColumn("Lat", mongo_stops["coordinates"].getItem(0)) \
+    .withColumn("Lon", mongo_stops["longitude"]) \
+    .withColumn("Lat", mongo_stops["latitude"]) \
     .drop(func.col("_id")) \
-    .drop(func.col("coordinates")) \
     .withColumn("stop_nr", func.concat(func.col("unit"), func.col("post"))) \
     .drop(func.col("post")) \
     .withColumnRenamed("unit_name", "StopName")
