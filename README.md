@@ -1,13 +1,13 @@
 # WarsawPublicTransport
 
-Getting Started
+## Getting Started
 
 All commands and scripts below are for Ubuntu, but they may be easily adopted for any other Linux.
 
 1. Create folder GIT and clone the repository
 2. Install Docker
-3. Run docker-compose up airflow-init to initialize environment
-4. Start all services with docker-compose up -d command
+3. Run `docker-compose up airflow-init` to initialize environment
+4. Start all services with `docker-compose up -d` command
 5. Open webserver which is available at http://localhost:8080
 login: airflow 
 password: airflow
@@ -26,4 +26,5 @@ b) Spark connection:
 
 8. Turn on relevant DAGs
 
+## Cleaning-up the environment
 To stop and delete containers, delete volumes with database data and download images, run docker-compose down --volumes --rmi all
