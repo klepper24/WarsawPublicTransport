@@ -176,14 +176,14 @@ def load_calendar_to_MongoDB(ti) -> None:
         my_collection.insert_one(calendar.obj_to_dict())
 
 
-def get_json(link: str) -> json:
+def get_json_from_api(link: str) -> json:
     response = requests.get(link)
     return json.loads(response.text)
     
         
 def create_stops_list() -> List[Stop]:
     stops = []
-    json_string = get_json(f'https://api.um.warszawa.pl/api/action/dbstore_get/?id={resource_id}&apikey={api_key}')
+    json_string = get_json_from_api(f'https://api.um.warszawa.pl/api/action/dbstore_get/?id={resource_id}&apikey={api_key}')
     for stop_values in json_string['result']:
         unit = stop_values['values'][0]['value']
         post = stop_values['values'][1]['value']
