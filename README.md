@@ -2,7 +2,7 @@
 
 ## Getting Started
 
-1. Create folder GIT and clone the repository
+1. Clone the repository with the following command `git clone https://github.com/klepper24/WarsawPublicTransport.git GIT`
 2. Install Docker
 3. Run `docker-compose up airflow-init` to initialize environment
 4. Start all services with `docker-compose up -d` command
