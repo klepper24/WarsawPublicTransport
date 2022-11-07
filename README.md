@@ -2,8 +2,6 @@
 
 ## Getting Started
 
-All commands and scripts below are for Ubuntu, but they may be easily adopted for any other Linux.
-
 1. Create folder GIT and clone the repository
 2. Install Docker
 3. Run `docker-compose up airflow-init` to initialize environment
