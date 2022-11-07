@@ -25,4 +25,4 @@ b) Spark connection:
 8. Turn on relevant DAGs
 
 ## Cleaning-up the environment
-To stop and delete containers, delete volumes with database data and download images, run docker-compose down --volumes --rmi all
+To stop and delete containers, delete volumes with database data and download images, run `docker-compose down --volumes --rmi all`
