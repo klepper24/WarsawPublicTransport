@@ -21,10 +21,12 @@ COPY . /code
 
 # Installation:
 # 1. Python
-RUN apt update && apt install -y software-properties-common && add-apt-repository ppa:deadsnakes/ppa
-RUN apt install -y curl
-RUN apt install -y python3.9
-RUN apt install -y python3.9-distutils
+RUN apt-get update && apt-get install -y \
+	software-properties-common \
+	curl \
+	python3.9 \
+	python3.9-distutils \
+&& add-apt-repository ppa:deadsnakes/ppa
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 RUN python3.9 get-pip.py
 
