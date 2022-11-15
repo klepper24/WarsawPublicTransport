@@ -19,7 +19,9 @@ from orchestrator.dags.utils import generate_api_warszawa_url
 API_KEY = Variable.get("api_key")
 RESOURCE_ID = 'f2e5503e927d-4ad3-9500-4ab9e55deb59'
 
-
+###############################################
+# Python functions
+###############################################
 def save_tram_gps(ti) -> None:
     url = generate_api_warszawa_url(API_KEY, RESOURCE_ID, type=2)
     r = requests.get(url)

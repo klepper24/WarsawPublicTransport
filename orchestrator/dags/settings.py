@@ -15,3 +15,7 @@ TODAY_TIME = TODAY_DATETIME.strftime("%H%M%S")
 TRAM_FOLDER = os.path.join(SPARK_OUT_DIR, TODAY_DATE)
 
 API_WARSZAWA_URL = 'https://api.um.warszawa.pl/api/action/busestrams_get/'
+
+ZTM_GENERAL_LINK = 'ftp://rozklady.ztm.waw.pl'
+
+MONGO_HOST = 'git_mongo-python_1'
