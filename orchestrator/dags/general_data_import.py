@@ -66,23 +66,22 @@ def download_general_ztm_data(ti) -> None:
         
 def extract_timetable_lines(ti) -> None:
     general_file_name = ti.xcom_pull(key='general_file_name')
-    with open(f'{OUT_DIR}{general_file_name}', "rt", encoding="utf8") as file:
-        for line in file:
+    with open(f'{OUT_DIR}{general_file_name}', "rt", encoding="utf8") as file_in:
+        for line in file_in:
             if "Linia:" in line and len(line.split()[1]) < 3 and line.split()[1].isdecimal():
                 tram_number = line.split()[1]
-                f = open(f'{OUT_DIR}tram_line{tram_number}.txt', "w", encoding="utf8")
-                while True:
-                    try:
-                        f.write(line)
-                        line = next(file)
-                    except StopIteration:
-                        # there is no lines left
-                        break
-                    if '#WK' in line:
-                        # we've reached the end of the data for given tram line
-                        f.close()
-                        break
-                continue    
+                with open(f'{OUT_DIR}tram_line{tram_number}.txt', "w", encoding="utf8") as outfile:
+                    while True:
+                        outfile.write(line)
+                        try:
+                            line = next(file_in)
+                        except StopIteration:
+                            # there is no lines left
+                            break
+                        if '#WK' in line:
+                            # we've reached the end of the data for given tram line
+                            break
+                    # continue
 
 
 def convert_to_time(str_hour: str) -> datetime.date:
@@ -98,32 +97,38 @@ def extract_timetable() -> List[TimeTable]:
     for file in os.listdir(OUT_DIR):
         filename = os.fsdecode(file)
         if filename.endswith(".txt") and filename.startswith("tram"):
-            f = open(f'{OUT_DIR}{filename}', "r", encoding="utf8")
-            for line in f:
-                if 'Linia:' in line:
-                    line_number = line.split()[1]
-                elif '*TR' in line:
-                    num_of_route = line.strip()[3:]
-                elif '*RP' in line or '#OP' in line:
-                    line = next(f)
-                    stop_info = line.split()
-                    unit = stop_info[0][0:4]
-                    post = stop_info[0][4:]
-                elif '*OD' in line:
-                    i = int(line.split()[1])
-                    line = next(f)
-                    for n in range(i):
-                        hour, stop = line.split()
-                        departure_time = convert_to_time(hour)
-                        route, day_type, _ = stop.split('/')
-                        new_time_table = TimeTable(int(line_number), route, day_type, unit, post, str(departure_time), n)
-                        time_table.append(new_time_table)
-                        line = next(f)
-                else:
-                    continue
-            f.close()
+            with open(f'{OUT_DIR}{filename}', "r", encoding="utf8") as f:
+                for line in f:
+                    if 'Linia:' in line:
+                        line_number = line.split()[1]
+                    elif '*TR' in line:
+                        num_of_route = line.strip()[3:]
+                    elif '*RP' in line or '#OP' in line:
+                        try:
+                            line = next(f)
+                        except StopIteration:
+                            break
+                        stop_info = line.split()
+                        unit = stop_info[0][0:4]
+                        post = stop_info[0][4:]
+                    elif '*OD' in line:
+                        i = int(line.split()[1])
+                        try:
+                            line = next(f)
+                        except StopIteration:
+                            break
+                        for n in range(i):
+                            hour, stop = line.split()
+                            departure_time = convert_to_time(hour)
+                            route, day_type, _ = stop.split('/')
+                            new_time_table = TimeTable(int(line_number), route, day_type, unit, post, str(departure_time), n)
+                            time_table.append(new_time_table)
+                            try:
+                                line = next(f)
+                            except StopIteration:
+                                break
 
-    return time_table     
+    return time_table
 
 
 def load_timetable_to_MongoDB() -> None:
@@ -138,29 +143,27 @@ def load_timetable_to_MongoDB() -> None:
 
 
 def extract_calendar_lines(general_file_name: str) -> List[Calendar]:
-    calendar_days= []
+    calendar_days = []
     current_date = str(datetime.today()).split()[0]
-    with open(f"{OUT_DIR}{general_file_name}", "rt", encoding="utf8") as file:
-        for line in file:
-            if "*KA" in line:
-                line = next(file)
-                f = open(f'{OUT_DIR}calendar{current_date}.txt', "w", encoding="utf8")
-                while True:
-                    try:
+    with open(f"{OUT_DIR}{general_file_name}", "rt", encoding="utf8") as file_in:
+        with open(f'{OUT_DIR}calendar{current_date}.txt', "w", encoding="utf8") as outfile:
+            for line in file_in:
+                if "*KA" in line:
+                    line = next(file_in)
+                    while True:
                         line_data = line.split()
                         new_calendar_day = Calendar(line_data[0], line_data[2:])
                         calendar_days.append(new_calendar_day)
-                        f.write(line)
-                        line = next(file)
-                    except StopIteration:
-                        # there is no lines left
-                        break
-                    if '#KA' in line:
-                        # we've reached the end of the data for given tram line
-                        f.close()
-                        break
-                continue
-        return calendar_days
+                        outfile.write(line)
+                        try:
+                            line = next(file_in)
+                        except StopIteration:
+                            # there is no lines left
+                            break
+                        if '#KA' in line:
+                            # we've reached the end of the data for given tram line
+                            break
+    return calendar_days
 
 
 def load_calendar_to_MongoDB(ti) -> None:
@@ -175,7 +178,7 @@ def load_calendar_to_MongoDB(ti) -> None:
         my_collection.insert_one(calendar.obj_to_dict())
 
 
-def get_json(link: str) -> json:
+def get_json_from_api(link: str) -> json:
     response = requests.get(link)
     return json.loads(response.text)
     
@@ -217,24 +220,19 @@ def extract_routes_lines(ti) -> None:
     general_file_name = ti.xcom_pull(key='general_file_name')
     routes_output_file = "routes_file.txt"
     with open(f"{OUT_DIR}{general_file_name}", "rt", encoding="utf-8") as file:
-        f = open(routes_output_file, "w", encoding='utf-8')
-        previous_line = ""
-        for line in file:
-            if '*TR' in line or '*LW' in line:
-                try:
+        with open(routes_output_file, "w", encoding='utf-8') as f:
+            previous_line = ""
+            for line in file:
+                if '*TR' in line or '*LW' in line:
                     f.write(previous_line)
-                except StopIteration:
-                    # there is no lines left
-                    break
-                while '#LW' not in line:
-                    try:
+                    while '#LW' not in line:
                         f.write(line)
-                        line = next(file)
-                    except StopIteration:
-                        # there is no lines left
-                        break
-            previous_line = line
-        f.close()
+                        try:
+                            line = next(file)
+                        except StopIteration:
+                            # there is no lines left
+                            break
+                previous_line = line
         
     ti.xcom_push(key="routes_output_file", value=routes_output_file)
 
@@ -325,7 +323,7 @@ def load_routes_to_MongoDB(ti) -> None:
     my_collection = my_database["Routes"]
 
     my_collection.drop()
-    routes_file_name=ti.xcom_pull(key='routes_output_file')
+    routes_file_name = ti.xcom_pull(key='routes_output_file')
     routes = create_routes_json(routes_file_name)
     for route in routes:
         my_collection.insert_one(route)  
@@ -380,7 +378,6 @@ with DAG(
         python_callable=load_calendar_to_MongoDB
     )  
 
-    
     task_load_stops_to_MongoDB = PythonOperator(
         task_id="load_stops_to_MongoDB",
         python_callable=load_stops_to_MongoDB
@@ -399,7 +396,7 @@ with DAG(
     end = DummyOperator(task_id="end", dag=dag)
 
     start >> task_download_general_ztm_data >> task_extract_lines >> task_load_timetable_to_MongoDB \
-    >> task_remove_files >> task_load_calendar_to_MongoDB >> task_load_stops_to_MongoDB \
-    >> task_extract_routes_lines >> task_load_routes_to_MongoDB >> end
+        >> task_remove_files >> task_load_calendar_to_MongoDB >> task_load_stops_to_MongoDB \
+        >> task_extract_routes_lines >> task_load_routes_to_MongoDB >> end
     
     

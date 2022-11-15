@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import timedelta
+from http import HTTPStatus
 
 import requests
 from airflow import DAG
@@ -12,6 +13,7 @@ from airflow.operators.python_operator import PythonOperator
 
 from orchestrator.dags import settings
 from orchestrator.dags.utils import generate_api_warszawa_url
+
 
 ###############################################
 # Parameters
@@ -26,7 +28,7 @@ def save_tram_gps(ti) -> None:
     url = generate_api_warszawa_url(API_KEY, RESOURCE_ID, type=2)
     r = requests.get(url)
     status = r.status_code
-    if status == 200:
+    if status == HTTPStatus.OK:
         json_response = r.json()
 
         # saving json to file
