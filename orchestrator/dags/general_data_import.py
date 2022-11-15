@@ -70,15 +70,15 @@ def download_general_ztm_data(ti) -> None:
         
 def extract_timetable_lines(ti) -> None:
     general_file_name = ti.xcom_pull(key='general_file_name')
-    with open(f'{out_dir}{general_file_name}', "rt", encoding="utf8") as infile:
-        for line in infile:
+    with open(f'{out_dir}{general_file_name}', "rt", encoding="utf8") as file_in:
+        for line in file_in:
             if "Linia:" in line and len(line.split()[1]) < 3 and line.split()[1].isdecimal():
                 tram_number = line.split()[1]
                 with open(f'{out_dir}tram_line{tram_number}.txt', "w", encoding="utf8") as outfile:
                     while True:
                         outfile.write(line)
                         try:
-                            line = next(infile)
+                            line = next(file_in)
                         except StopIteration:
                             # there is no lines left
                             break
@@ -149,18 +149,18 @@ def load_timetable_to_MongoDB() -> None:
 def extract_calendar_lines(general_file_name: str) -> List[Calendar]:
     calendar_days = []
     current_date = str(datetime.today()).split()[0]
-    with open(f"{out_dir}{general_file_name}", "rt", encoding="utf8") as infile:
+    with open(f"{out_dir}{general_file_name}", "rt", encoding="utf8") as file_in:
         with open(f'{out_dir}calendar{current_date}.txt', "w", encoding="utf8") as outfile:
-            for line in infile:
+            for line in file_in:
                 if "*KA" in line:
-                    line = next(infile)
+                    line = next(file_in)
                     while True:
                         line_data = line.split()
                         new_calendar_day = Calendar(line_data[0], line_data[2:])
                         calendar_days.append(new_calendar_day)
                         outfile.write(line)
                         try:
-                            line = next(infile)
+                            line = next(file_in)
                         except StopIteration:
                             # there is no lines left
                             break
