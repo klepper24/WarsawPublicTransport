@@ -12,7 +12,7 @@ from airflow.operators.http_operator import SimpleHttpOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.bash_operator import BashOperator
 from airflow.models import Variable
-
+from http import HTTPStatus
 
 ###############################################
 # Parameters
@@ -35,7 +35,7 @@ def save_tram_gps(ti) -> None:
     url = f'https://api.um.warszawa.pl/api/action/busestrams_get/?resource_id={resource_id}&type=2&apikey={api_key}'
     r = requests.get(url)
     status = r.status_code
-    if status == 200:
+    if status == HTTPStatus.OK:
         json_response = r.json()
 
         # saving json to file
