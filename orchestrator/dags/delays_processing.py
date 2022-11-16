@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import timedelta
+from datetime import timedelta, datetime
 from http import HTTPStatus
 
 import requests
@@ -11,9 +11,8 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
 
-from orchestrator.dags import settings
-from orchestrator.dags.utils import generate_api_warszawa_url
-
+import settings
+from utils import generate_api_warszawa_url
 
 ###############################################
 # Parameters
@@ -21,9 +20,7 @@ from orchestrator.dags.utils import generate_api_warszawa_url
 API_KEY = Variable.get("api_key")
 RESOURCE_ID = 'f2e5503e927d-4ad3-9500-4ab9e55deb59'
 
-###############################################
-# Python functions
-###############################################
+
 def save_tram_gps(ti) -> None:
     url = generate_api_warszawa_url(API_KEY, RESOURCE_ID, type=2)
     r = requests.get(url)
@@ -45,7 +42,7 @@ def save_tram_gps(ti) -> None:
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": settings.NOW.date(),  # @TODO: check if works
+    "start_date":   datetime(settings.NOW.year, settings.NOW.month, settings.NOW.day),
     "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,

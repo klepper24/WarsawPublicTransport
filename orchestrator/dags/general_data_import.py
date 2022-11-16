@@ -1,27 +1,23 @@
+import codecs
+import json
+import os
+import sys
 from datetime import datetime, timedelta
 from typing import List, Dict
-from models import TimeTable, Stop, Calendar
 
-import sys
-import os
-import json
-
-import wget
 import py7zr
-import codecs
 import pymongo
 import requests
-
+import wget
 from airflow import DAG
+from airflow.models import Variable
+from airflow.operators.bash_operator import BashOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python import PythonOperator
-from airflow.operators.bash_operator import BashOperator
-from airflow.providers.http.sensors.http import HttpSensor
-from airflow.operators.http_operator import SimpleHttpOperator
-from airflow.models import Variable
 
-from orchestrator.dags import settings
-from orchestrator.dags.utils import generate_api_warszawa_url
+from models import TimeTable, Stop, Calendar
+import settings
+from utils import generate_api_warszawa_url
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
@@ -398,5 +394,3 @@ with DAG(
     start >> task_download_general_ztm_data >> task_extract_lines >> task_load_timetable_to_MongoDB \
         >> task_remove_files >> task_load_calendar_to_MongoDB >> task_load_stops_to_MongoDB \
         >> task_extract_routes_lines >> task_load_routes_to_MongoDB >> end
-    
-    

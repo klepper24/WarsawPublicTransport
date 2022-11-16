@@ -1,4 +1,4 @@
-from orchestrator.dags import settings
+import settings
 
 
 def generate_api_warszawa_url(api_key: str, resource_id: str, **kwargs):
