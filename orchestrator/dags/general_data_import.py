@@ -15,8 +15,8 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python import PythonOperator
 
-from models import TimeTable, Stop, Calendar
 import settings
+from models import TimeTable, Stop, Calendar
 from utils import generate_api_warszawa_url
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
