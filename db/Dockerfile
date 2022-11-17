@@ -28,10 +28,10 @@ RUN apt-get update && apt-get install -y \
 	python3.9-distutils \
 	wget \
 	nano \
-	pymongo \
 && add-apt-repository ppa:deadsnakes/ppa \
 && curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
-&& python3.9 get-pip.py
+&& python3.9 get-pip.py \
+&& pip install pymongo
 
 # Expose port #27017 from the container to the host
 EXPOSE 27017
