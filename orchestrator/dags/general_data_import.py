@@ -1,24 +1,23 @@
+import codecs
+import json
+import os
+import sys
 from datetime import datetime, timedelta
 from typing import List, Dict
-from models import TimeTable, Stop, Calendar
 
-import sys
-import os
-import json
-
-import wget
 import py7zr
-import codecs
 import pymongo
 import requests
-
+import wget
 from airflow import DAG
+from airflow.models import Variable
+from airflow.operators.bash_operator import BashOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python import PythonOperator
-from airflow.operators.bash_operator import BashOperator
-from airflow.providers.http.sensors.http import HttpSensor
-from airflow.operators.http_operator import SimpleHttpOperator
-from airflow.models import Variable
+
+import settings
+from models import TimeTable, Stop, Calendar
+from utils import generate_api_warszawa_url
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
@@ -26,16 +25,9 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 ###############################################
 # Parameters
 ###############################################
-api_key = Variable.get("api_key")
-ztm_general_link = 'ftp://rozklady.ztm.waw.pl'
-out_dir = '/opt/airflow/dags/data/'
-resource_id = 'ab75c33d-3a26-4342-b36a-6e5fef0a3ac3'
-mongo_host = 'git_mongo-python_1'
-
-###############################################
-# DAG Definition
-###############################################
-now = datetime.now()
+API_KEY = Variable.get("api_key")
+RESOURCE_ID = 'ab75c33d-3a26-4342-b36a-6e5fef0a3ac3'
+OUT_DIR = '/opt/airflow/dags/data/'
 
 
 ###############################################
@@ -47,22 +39,22 @@ def download_general_ztm_data(ti) -> None:
     change encoding from ansi to utf8
 
     """
-    ftp = wget.download(ztm_general_link, out=out_dir)
+    ftp = wget.download(settings.ZTM_GENERAL_LINK, out=OUT_DIR)
     with open(ftp) as f:
         files_list = [line.rstrip('\n') for line in f]
     file_name = files_list[-1][-11:]
-    link_to_file = f'{ztm_general_link}/{file_name}'
-    ztm_general_file = wget.download(link_to_file, out=out_dir)
+    link_to_file = f'{settings.ZTM_GENERAL_LINK}/{file_name}'
+    ztm_general_file = wget.download(link_to_file, out=OUT_DIR)
 
     with py7zr.SevenZipFile(ztm_general_file, mode='r') as z:
-        z.extractall(f'{out_dir}')
+        z.extractall(f'{OUT_DIR}')
         general_file_name = z.getnames()
     general_file_name = general_file_name[0]
 
     # change encoding
-    with codecs.open(f'{out_dir}{general_file_name}', 'r', encoding='ISO-8859-1') as file:
+    with codecs.open(f'{OUT_DIR}{general_file_name}', 'r', encoding='ISO-8859-1') as file:
         lines = file.read()
-    with codecs.open(f'{out_dir}{general_file_name}', 'w', encoding='utf8') as file:
+    with codecs.open(f'{OUT_DIR}{general_file_name}', 'w', encoding='utf8') as file:
         file.write(lines)
 
     ti.xcom_push(key="general_file_name", value=general_file_name)
@@ -70,11 +62,11 @@ def download_general_ztm_data(ti) -> None:
         
 def extract_timetable_lines(ti) -> None:
     general_file_name = ti.xcom_pull(key='general_file_name')
-    with open(f'{out_dir}{general_file_name}', "rt", encoding="utf8") as file_in:
+    with open(f'{OUT_DIR}{general_file_name}', "rt", encoding="utf8") as file_in:
         for line in file_in:
             if "Linia:" in line and len(line.split()[1]) < 3 and line.split()[1].isdecimal():
                 tram_number = line.split()[1]
-                with open(f'{out_dir}tram_line{tram_number}.txt', "w", encoding="utf8") as outfile:
+                with open(f'{OUT_DIR}tram_line{tram_number}.txt', "w", encoding="utf8") as outfile:
                     while True:
                         outfile.write(line)
                         try:
@@ -98,10 +90,10 @@ def convert_to_time(str_hour: str) -> datetime.date:
 
 def extract_timetable() -> List[TimeTable]:
     time_table = []
-    for file in os.listdir(out_dir):
+    for file in os.listdir(OUT_DIR):
         filename = os.fsdecode(file)
         if filename.endswith(".txt") and filename.startswith("tram"):
-            with open(f'{out_dir}{filename}', "r", encoding="utf8") as f:
+            with open(f'{OUT_DIR}{filename}', "r", encoding="utf8") as f:
                 for line in f:
                     if 'Linia:' in line:
                         line_number = line.split()[1]
@@ -136,7 +128,7 @@ def extract_timetable() -> List[TimeTable]:
 
 
 def load_timetable_to_MongoDB() -> None:
-    my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{mongo_host}:27017/")
+    my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{settings.MONGO_HOST}:27017/")
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Timetable"]
 
@@ -149,8 +141,8 @@ def load_timetable_to_MongoDB() -> None:
 def extract_calendar_lines(general_file_name: str) -> List[Calendar]:
     calendar_days = []
     current_date = str(datetime.today()).split()[0]
-    with open(f"{out_dir}{general_file_name}", "rt", encoding="utf8") as file_in:
-        with open(f'{out_dir}calendar{current_date}.txt', "w", encoding="utf8") as outfile:
+    with open(f"{OUT_DIR}{general_file_name}", "rt", encoding="utf8") as file_in:
+        with open(f'{OUT_DIR}calendar{current_date}.txt', "w", encoding="utf8") as outfile:
             for line in file_in:
                 if "*KA" in line:
                     line = next(file_in)
@@ -171,7 +163,7 @@ def extract_calendar_lines(general_file_name: str) -> List[Calendar]:
 
 
 def load_calendar_to_MongoDB(ti) -> None:
-    my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{mongo_host}:27017/")
+    my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{settings.MONGO_HOST}:27017/")
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Calendar"]
 
@@ -189,7 +181,8 @@ def get_json_from_api(link: str) -> json:
         
 def create_stops_list() -> List[Stop]:
     stops = []
-    json_string = get_json_from_api(f'https://api.um.warszawa.pl/api/action/dbstore_get/?id={resource_id}&apikey={api_key}')
+    url = generate_api_warszawa_url(API_KEY, RESOURCE_ID)
+    json_string = get_json(url)
     for stop_values in json_string['result']:
         unit = stop_values['values'][0]['value']
         post = stop_values['values'][1]['value']
@@ -207,7 +200,7 @@ def create_stops_list() -> List[Stop]:
 
 
 def load_stops_to_MongoDB() -> None:
-    my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{mongo_host}:27017/")
+    my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{settings.MONGO_HOST}:27017/")
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Stops"]
 
@@ -222,7 +215,7 @@ def load_stops_to_MongoDB() -> None:
 def extract_routes_lines(ti) -> None:
     general_file_name = ti.xcom_pull(key='general_file_name')
     routes_output_file = "routes_file.txt"
-    with open(f"{out_dir}{general_file_name}", "rt", encoding="utf-8") as file:
+    with open(f"{OUT_DIR}{general_file_name}", "rt", encoding="utf-8") as file:
         with open(routes_output_file, "w", encoding='utf-8') as f:
             previous_line = ""
             for line in file:
@@ -321,7 +314,7 @@ def create_routes_json(input_file: str) -> List[Dict]:
 
 
 def load_routes_to_MongoDB(ti) -> None:
-    my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{mongo_host}:27017/")
+    my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{settings.MONGO_HOST}:27017/")
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Routes"]
 
@@ -330,7 +323,11 @@ def load_routes_to_MongoDB(ti) -> None:
     routes = create_routes_json(routes_file_name)
     for route in routes:
         my_collection.insert_one(route)  
-    
+
+###############################################
+# DAG Definition
+###############################################
+now = datetime.now()    
 
 default_args = {
     "owner": "mklepacki",
@@ -369,7 +366,7 @@ with DAG(
 
     task_remove_files = BashOperator(
         task_id="remove_files",
-        bash_command=f"rm {out_dir}download* & rm {out_dir}tram* & rm {out_dir}*.7z"
+        bash_command=f"rm {OUT_DIR}download* & rm {OUT_DIR}tram* & rm {OUT_DIR}*.7z"
     )
     
     task_load_calendar_to_MongoDB = PythonOperator(
@@ -397,5 +394,3 @@ with DAG(
     start >> task_download_general_ztm_data >> task_extract_lines >> task_load_timetable_to_MongoDB \
         >> task_remove_files >> task_load_calendar_to_MongoDB >> task_load_stops_to_MongoDB \
         >> task_extract_routes_lines >> task_load_routes_to_MongoDB >> end
-    
-    
