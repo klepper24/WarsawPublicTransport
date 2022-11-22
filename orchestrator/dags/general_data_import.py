@@ -11,8 +11,8 @@ import requests
 import wget
 from airflow import DAG
 from airflow.models import Variable
-from airflow.operators.bash_operator import BashOperator
-from airflow.operators.dummy_operator import DummyOperator
+from airflow.operators.bash import BashOperator
+from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 
 import settings
@@ -182,7 +182,7 @@ def get_json_from_api(link: str) -> json:
 def create_stops_list() -> List[Stop]:
     stops = []
     url = generate_api_warszawa_url(API_KEY, RESOURCE_ID)
-    json_string = get_json(url)
+    json_string = get_json_from_api(url)
     for stop_values in json_string['result']:
         unit = stop_values['values'][0]['value']
         post = stop_values['values'][1]['value']
@@ -347,7 +347,7 @@ with DAG(
         default_args=default_args,
 ) as dag:
 
-    start = DummyOperator(task_id="start", dag=dag)
+    start = EmptyOperator(task_id="start", dag=dag)
 
     task_download_general_ztm_data = PythonOperator(
         task_id="download_general_ztm_data",
@@ -389,7 +389,7 @@ with DAG(
         python_callable=load_routes_to_MongoDB
     )     
 
-    end = DummyOperator(task_id="end", dag=dag)
+    end = EmptyOperator(task_id="end", dag=dag)
 
     start >> task_download_general_ztm_data >> task_extract_lines >> task_load_timetable_to_MongoDB \
         >> task_remove_files >> task_load_calendar_to_MongoDB >> task_load_stops_to_MongoDB \

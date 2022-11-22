@@ -5,11 +5,11 @@ from http import HTTPStatus
 
 import requests
 from airflow import DAG
-from airflow.contrib.operators.spark_submit_operator import SparkSubmitOperator
+from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from airflow.models import Variable
-from airflow.operators.bash_operator import BashOperator
-from airflow.operators.dummy_operator import DummyOperator
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.bash import BashOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import PythonOperator
 
 import settings
 from utils import generate_api_warszawa_url
@@ -57,7 +57,7 @@ with DAG(
         schedule_interval=timedelta(1)
 ) as dag:
 
-    start = DummyOperator(task_id="start", dag=dag)
+    start = EmptyOperator(task_id="start", dag=dag)
 
 #    task_is_api_active = HttpSensor(
 #        task_id='is_api_active',
@@ -88,6 +88,6 @@ with DAG(
                      f' & rm -R {settings.TRAM_FOLDER}'
     )        
     
-    end = DummyOperator(task_id="end", dag=dag)
+    end = EmptyOperator(task_id="end", dag=dag)
 
     start >> task_save_tram_gps >> spark_job >> task_move_to_archive >> end
