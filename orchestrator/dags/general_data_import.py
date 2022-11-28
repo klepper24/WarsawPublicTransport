@@ -4,7 +4,6 @@ import os
 import sys
 from datetime import datetime, timedelta
 from typing import List, Dict
-
 import py7zr
 import pymongo
 import requests
@@ -181,7 +180,7 @@ def get_json_from_api(link: str) -> json:
         
 def create_stops_list() -> List[Stop]:
     stops = []
-    url = generate_api_warszawa_url(API_KEY, RESOURCE_ID)
+    url = generate_api_warszawa_url(settings.ENDPOINT_DBSTORE, API_KEY, RESOURCE_ID, 'id')
     json_string = get_json_from_api(url)
     for stop_values in json_string['result']:
         unit = stop_values['values'][0]['value']
@@ -323,12 +322,13 @@ def load_routes_to_MongoDB(ti) -> None:
     routes = create_routes_json(routes_file_name)
     for route in routes:
         my_collection.insert_one(route)  
+    
 
 ###############################################
 # DAG Definition
 ###############################################
-now = datetime.now()    
-
+now = datetime.now()
+                                              
 default_args = {
     "owner": "mklepacki",
     "depends_on_past": False,
@@ -394,3 +394,5 @@ with DAG(
     start >> task_download_general_ztm_data >> task_extract_lines >> task_load_timetable_to_MongoDB \
         >> task_remove_files >> task_load_calendar_to_MongoDB >> task_load_stops_to_MongoDB \
         >> task_extract_routes_lines >> task_load_routes_to_MongoDB >> end
+    
+    
