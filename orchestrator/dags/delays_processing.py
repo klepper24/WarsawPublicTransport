@@ -73,7 +73,7 @@ with DAG(
 
     spark_job = SparkSubmitOperator(
         task_id="spark_job",
-        application="/opt/spark/execution_scripts/delays_proc2.py",  # Spark app path created in airflow & spark cluster
+        application="/opt/spark/execution_scripts/delays_proc.py",  # Spark app path created in airflow & spark cluster
         application_args=[settings.TRAM_FOLDER],
         name="delays processing",
         conn_id="spark_default",
