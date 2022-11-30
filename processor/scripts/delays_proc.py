@@ -8,14 +8,15 @@ from pyspark.sql.window import Window
 
 
 class DelaysProcessor:
-    MONGO_HOST = 'git_mongo-python_1'
+    MONGO_HOST = 'mongo-python'
     MONGO_URL_STOPS = f"mongodb://root:pass12345@{MONGO_HOST}:27017/WarsawPublicTransport.Stops?authSource=admin"
-    MSSQL_HOST = 'git_ms-sql_1'
+    MSSQL_HOST = 'ms-sql'
     SQLSERVER_USERNAME = "SA"
     SQLSERVER_PASSWORD = "mssql1Ipw"
 
     def __init__(self):
         self.spark = self._initialize_spark_connection()
+        print(self.spark)
         self.udf_get_distance = func.udf(self.get_distance, DoubleType())
 
     def execute_script(self):
