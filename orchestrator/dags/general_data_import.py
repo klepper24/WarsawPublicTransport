@@ -16,7 +16,7 @@ from airflow.operators.python import PythonOperator
 
 import settings
 from models import TimeTable, Stop, Calendar
-from utils import generate_api_warszawa_url
+from utils import ApiWarsawUrl
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
@@ -180,8 +180,8 @@ def get_json_from_api(link: str) -> json:
         
 def create_stops_list() -> List[Stop]:
     stops = []
-    url = generate_api_warszawa_url(settings.ENDPOINT_DBSTORE, API_KEY, RESOURCE_ID, 'id')
-    json_string = get_json_from_api(url)
+    api = ApiWarsawUrl(apikey=API_KEY)
+    _, json_string = api.get_dbstore(id=RESOURCE_ID)
     for stop_values in json_string['result']:
         unit = stop_values['values'][0]['value']
         post = stop_values['values'][1]['value']

@@ -12,7 +12,7 @@ from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 
 import settings
-from utils import generate_api_warszawa_url
+from utils import ApiWarsawUrl
 
 ###############################################
 # Parameters
@@ -22,12 +22,9 @@ RESOURCE_ID = 'f2e5503e927d-4ad3-9500-4ab9e55deb59'
 
 
 def save_tram_gps(ti) -> None:
-    url = generate_api_warszawa_url(settings.ENDPOINT_BUSESTRAMS, API_KEY, RESOURCE_ID, 'resource_id', type=2)
-    r = requests.get(url)
-    status = r.status_code
+    api = ApiWarsawUrl(apikey=API_KEY)
+    status, json_response = api.get_busestrams(resource_id=RESOURCE_ID, type=2)
     if status == HTTPStatus.OK:
-        json_response = r.json()
-
         # saving json to file
         filename = f'{settings.TRAM_FOLDER}tram{settings.TODAY_TIME}.json'
         os.makedirs(os.path.dirname(filename), exist_ok=True)

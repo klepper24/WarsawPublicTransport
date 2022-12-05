@@ -1,12 +1,38 @@
 import settings
+import requests
 
 
-def generate_api_warszawa_url(endpoint: str, api_key: str, resource_id: str, resource: str, **kwargs) -> str:
-    """
-    Returns url to Warsaw Public Transport API with given parameters as query strings
-    """
-    url = settings.API_WARSZAWA_URL + endpoint
-    url += f'?{resource}={resource_id}&apikey={api_key}'
-    for k, v in kwargs.items():
-        url += f'&{k}={v}'
-    return url
+class ApiWarsawUrl:
+    BASE_URL = 'https://api.um.warszawa.pl/'
+    ENDPOINT_DBSTORE = 'api/action/dbstore_get/'
+    ENDPOINT_BUSESTRAMS = 'api/action/busestrams_get/'
+
+    def __init__(self, apikey):
+        self._client = requests.session()
+        self._apikey = apikey
+
+    def _get(self, url, params=None):
+        if params is None:
+            params = {}
+        default_params = {"apikey": self._apikey}
+        default_params.update(params)
+        response = self._client.get(
+            f"{ApiWarsawUrl.BASE_URL}{url}", params=default_params
+        )
+        response.raise_for_status()
+        return response.status_code, response.json()
+
+    def get_dbstore(self, id=None):
+        params = {}
+        if id is not None:
+            params["id"] = id
+        self._dbstore = self._get(ApiWarsawUrl.ENDPOINT_DBSTORE, params)
+        return self._dbstore
+
+    def get_busestrams(self, resource_id=None, type=None):
+        params = {}
+        if resource_id is not None and type is not None:
+            params["resource_id"] = resource_id
+            params["type"] = type
+        self._busestrams = self._get(ApiWarsawUrl.ENDPOINT_BUSESTRAMS, params)
+        return self._busestrams
