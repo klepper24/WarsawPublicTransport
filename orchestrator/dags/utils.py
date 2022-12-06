@@ -2,7 +2,7 @@ import settings
 import requests
 
 
-class ApiWarsawUrl:
+class WarsawApi:
     BASE_URL = 'https://api.um.warszawa.pl/'
     ENDPOINT_DBSTORE = 'api/action/dbstore_get/'
     ENDPOINT_BUSESTRAMS = 'api/action/busestrams_get/'
@@ -17,22 +17,21 @@ class ApiWarsawUrl:
         default_params = {"apikey": self._apikey}
         default_params.update(params)
         response = self._client.get(
-            f"{ApiWarsawUrl.BASE_URL}{url}", params=default_params
+            f"{WarsawApi.BASE_URL}{url}", params=default_params
         )
         response.raise_for_status()
-        return response.status_code, response.json()
+        return response.json()
 
-    def get_dbstore(self, id=None):
+    def get_dbstore(self, resource_id=None):
         params = {}
-        if id is not None:
-            params["id"] = id
-        self._dbstore = self._get(ApiWarsawUrl.ENDPOINT_DBSTORE, params)
+        if resource_id is not None:
+            params["id"] = resource_id
+        self._dbstore = self._get(WarsawApi.ENDPOINT_DBSTORE, params)
         return self._dbstore
 
-    def get_busestrams(self, resource_id=None, type=None):
+    def get_busestrams(self, resource_id=None, resource_type=None):
         params = {}
-        if resource_id is not None and type is not None:
+        if resource_id is not None and resource_type is not None:
             params["resource_id"] = resource_id
-            params["type"] = type
-        self._busestrams = self._get(ApiWarsawUrl.ENDPOINT_BUSESTRAMS, params)
-        return self._busestrams
+            params["type"] = resource_type
+        return self._get(WarsawApi.ENDPOINT_BUSESTRAMS, params)

@@ -16,7 +16,7 @@ from airflow.operators.python import PythonOperator
 
 import settings
 from models import TimeTable, Stop, Calendar
-from utils import ApiWarsawUrl
+from utils import WarsawApi
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
@@ -180,8 +180,8 @@ def get_json_from_api(link: str) -> json:
         
 def create_stops_list() -> List[Stop]:
     stops = []
-    api = ApiWarsawUrl(apikey=API_KEY)
-    _, json_string = api.get_dbstore(id=RESOURCE_ID)
+    api = WarsawApi(apikey=API_KEY)
+    json_string = api.get_dbstore(resource_id=RESOURCE_ID)
     for stop_values in json_string['result']:
         unit = stop_values['values'][0]['value']
         post = stop_values['values'][1]['value']
@@ -394,5 +394,3 @@ with DAG(
     start >> task_download_general_ztm_data >> task_extract_lines >> task_load_timetable_to_MongoDB \
         >> task_remove_files >> task_load_calendar_to_MongoDB >> task_load_stops_to_MongoDB \
         >> task_extract_routes_lines >> task_load_routes_to_MongoDB >> end
-    
-    
