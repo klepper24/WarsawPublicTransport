@@ -39,7 +39,7 @@ def save_tram_gps(ti) -> None:
 # DAG Definition
 ###############################################
 
-default_args = {
+DAG_DEFAULT_ARGS = {
     "owner": "airflow",
     "depends_on_past": False,
     "start_date":   datetime(settings.NOW.year, settings.NOW.month, settings.NOW.day),
@@ -49,11 +49,17 @@ default_args = {
     "retries": 1,
     "retry_delay": timedelta(minutes=1)
 }
+SPARK_ENVIRONMENT = {
+    'MONGO_HOST': 'git_mongo-python_1',
+    'MSSQL_HOST': 'git_ms-sql_1',
+    'SQLSERVER_USERNAME': 'SA',
+    'SQLSERVER_PASSWORD': 'mssql1Ipw',
+}
 
 with DAG(
         dag_id="delays_processing", 
         description="This DAG runs a Pyspark app that uses modules.",
-        default_args=default_args, 
+        default_args=DAG_DEFAULT_ARGS,
         schedule_interval=timedelta(1)
 ) as dag:
 
@@ -79,7 +85,9 @@ with DAG(
         conn_id="spark_default",
         conf={"spark.master": settings.SPARK_MASTER},
         packages="org.mongodb.spark:mongo-spark-connector_2.12:3.0.1,com.microsoft.sqlserver:mssql-jdbc:11.2.0.jre8",
-        dag=dag)
+        dag=dag,
+        env_vars=SPARK_ENVIRONMENT
+    )
         
     task_move_to_archive = BashOperator(
         task_id="move_to_archive",

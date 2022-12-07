@@ -1,3 +1,4 @@
+import os
 import sys
 from math import radians, cos, sin, asin, sqrt
 
@@ -8,11 +9,11 @@ from pyspark.sql.window import Window
 
 
 class DelaysProcessor:
-    MONGO_HOST = 'git_mongo-python_1'
+    MONGO_HOST = os.getenv('MONGO_HOST')
     MONGO_URL_STOPS = f"mongodb://root:pass12345@{MONGO_HOST}:27017/WarsawPublicTransport.Stops?authSource=admin"
-    MSSQL_HOST = 'git_ms-sql_1'
-    SQLSERVER_USERNAME = "SA"
-    SQLSERVER_PASSWORD = "mssql1Ipw"
+    MSSQL_HOST = os.getenv('MSSQL_HOST')
+    SQLSERVER_USERNAME = os.getenv('SQLSERVER_USERNAME')
+    SQLSERVER_PASSWORD = os.getenv('SQLSERVER_PASSWORD')
 
     def __init__(self):
         self.spark = self._initialize_spark_connection()
