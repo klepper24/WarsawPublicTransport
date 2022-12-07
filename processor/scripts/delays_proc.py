@@ -8,9 +8,9 @@ from pyspark.sql.window import Window
 
 
 class DelaysProcessor:
-    MONGO_HOST = 'mongo-python'
+    MONGO_HOST = 'git_mongo-python_1'
     MONGO_URL_STOPS = f"mongodb://root:pass12345@{MONGO_HOST}:27017/WarsawPublicTransport.Stops?authSource=admin"
-    MSSQL_HOST = 'ms-sql'
+    MSSQL_HOST = 'git_ms-sql_1'
     SQLSERVER_USERNAME = "SA"
     SQLSERVER_PASSWORD = "mssql1Ipw"
 
