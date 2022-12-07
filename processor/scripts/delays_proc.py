@@ -16,7 +16,6 @@ class DelaysProcessor:
 
     def __init__(self):
         self.spark = self._initialize_spark_connection()
-        print(self.spark)
         self.udf_get_distance = func.udf(self.get_distance, DoubleType())
 
     def execute_script(self):
