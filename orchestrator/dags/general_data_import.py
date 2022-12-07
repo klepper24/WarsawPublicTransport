@@ -128,7 +128,7 @@ def extract_timetable() -> List[TimeTable]:
 
 
 def load_timetable_to_MongoDB() -> None:
-    my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{settings.MONGO_HOST}:27017/")
+    my_client = pymongo.MongoClient(settings.MONGO_URL)
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Timetable"]
 
@@ -163,7 +163,7 @@ def extract_calendar_lines(general_file_name: str) -> List[Calendar]:
 
 
 def load_calendar_to_MongoDB(ti) -> None:
-    my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{settings.MONGO_HOST}:27017/")
+    my_client = pymongo.MongoClient(settings.MONGO_URL)
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Calendar"]
 
@@ -200,7 +200,7 @@ def create_stops_list() -> List[Stop]:
 
 
 def load_stops_to_MongoDB() -> None:
-    my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{settings.MONGO_HOST}:27017/")
+    my_client = pymongo.MongoClient(settings.MONGO_URL)
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Stops"]
 
@@ -314,7 +314,7 @@ def create_routes_json(input_file: str) -> List[Dict]:
 
 
 def load_routes_to_MongoDB(ti) -> None:
-    my_client = pymongo.MongoClient(f"mongodb://root:pass12345@{settings.MONGO_HOST}:27017/")
+    my_client = pymongo.MongoClient(settings.MONGO_URL)
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Routes"]
 

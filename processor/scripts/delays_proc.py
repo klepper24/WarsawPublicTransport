@@ -9,15 +9,26 @@ from pyspark.sql.window import Window
 
 
 class DelaysProcessor:
-    MONGO_HOST = os.getenv('MONGO_HOST')
-    MONGO_URL_STOPS = f"mongodb://root:pass12345@{MONGO_HOST}:27017/WarsawPublicTransport.Stops?authSource=admin"
+    MONGO_URL = os.getenv('MONGO_URL')
     MSSQL_HOST = os.getenv('MSSQL_HOST')
     SQLSERVER_USERNAME = os.getenv('SQLSERVER_USERNAME')
     SQLSERVER_PASSWORD = os.getenv('SQLSERVER_PASSWORD')
 
     def __init__(self):
+        self._check_variables()
         self.spark = self._initialize_spark_connection()
         self.udf_get_distance = func.udf(self.get_distance, DoubleType())
+
+    @staticmethod
+    def _check_variables():
+        if not DelaysProcessor.MONGO_URL:
+            raise RuntimeError('MONGO_URL env variable is not set')
+        if not DelaysProcessor.MSSQL_HOST:
+            raise RuntimeError('MSSQL_HOST env variable is not set')
+        if not DelaysProcessor.SQLSERVER_USERNAME:
+            raise RuntimeError('SQLSERVER_USERNAME env variable is not set')
+        if not DelaysProcessor.SQLSERVER_PASSWORD:
+            raise RuntimeError('SQLSERVER_PASSWORD env variable is not set')
 
     def execute_script(self):
         stops = self._get_stops()
@@ -35,12 +46,16 @@ class DelaysProcessor:
         self._write_fact_data(direction)
 
     @staticmethod
-    def _initialize_spark_connection():
+    def _get_mongo_collection_url(collection_name: str):
+        return DelaysProcessor.MONGO_URL + f'/WarsawPublicTransport.{collection_name}?authSource=admin'
+
+    def _initialize_spark_connection(self):
+        mongo_enpoint = self._get_mongo_collection_url('Stops')
         return SparkSession \
             .builder \
             .appName("WarsawTransportation") \
-            .config("spark.mongodb.input.uri", DelaysProcessor.MONGO_URL_STOPS) \
-            .config("spark.mongodb.output.uri", DelaysProcessor.MONGO_URL_STOPS) \
+            .config("spark.mongodb.input.uri", mongo_enpoint) \
+            .config("spark.mongodb.output.uri", mongo_enpoint) \
             .config('spark.jars.packages', 'org.mongodb.spark:mongo-spark-connector_2.12:3.0.1') \
             .getOrCreate()
 
@@ -222,8 +237,7 @@ class DelaysProcessor:
         self.write_data_to_sql_server("WarsawPublicTransport", "Delays", fact_data)
 
     def read_new_collection(self, collection_name: str) -> DataFrame:
-        mongo_url = f"mongodb://root:pass12345@{DelaysProcessor.MONGO_HOST}:27017/" \
-                    f"WarsawPublicTransport.{collection_name}?authSource=admin"
+        mongo_url = self._get_mongo_collection_url(collection_name)
         new_collection = self.spark.read \
             .option("uri", mongo_url) \
             .format("com.mongodb.spark.sql.DefaultSource") \

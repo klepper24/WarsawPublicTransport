@@ -50,10 +50,10 @@ DAG_DEFAULT_ARGS = {
     "retry_delay": timedelta(minutes=1)
 }
 SPARK_ENVIRONMENT = {
-    'MONGO_HOST': 'git_mongo-python_1',
-    'MSSQL_HOST': 'git_ms-sql_1',
-    'SQLSERVER_USERNAME': 'SA',
-    'SQLSERVER_PASSWORD': 'mssql1Ipw',
+    'MONGO_URL': settings.MONGO_URL,
+    'MSSQL_HOST': settings.MSSQL_HOST,
+    'SQLSERVER_USERNAME': settings.SQLSERVER_USERNAME,
+    'SQLSERVER_PASSWORD': settings.SQLSERVER_PASSWORD,
 }
 
 with DAG(
