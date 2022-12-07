@@ -18,4 +18,4 @@ API_WARSZAWA_URL = 'https://api.um.warszawa.pl/api/action/busestrams_get/'
 
 ZTM_GENERAL_LINK = 'ftp://rozklady.ztm.waw.pl'
 
-MONGO_HOST = 'mongo-python'
+MONGO_HOST = 'git_mongo-python_1'
