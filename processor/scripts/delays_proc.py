@@ -47,7 +47,7 @@ class DelaysProcessor:
 
     @staticmethod
     def _get_mongo_collection_url(collection_name: str):
-        return DelaysProcessor.MONGO_URL + f'/WarsawPublicTransport.{collection_name}?authSource=admin'
+        return f'{DelaysProcessor.MONGO_URL}WarsawPublicTransport.{collection_name}?authSource=admin'
 
     def _initialize_spark_connection(self):
         mongo_enpoint = self._get_mongo_collection_url('Stops')
