@@ -4,7 +4,6 @@ import os
 import sys
 from datetime import datetime, timedelta
 from typing import List, Dict
-
 import py7zr
 import pymongo
 import requests
@@ -17,7 +16,7 @@ from airflow.operators.python import PythonOperator
 
 import settings
 from models import TimeTable, Stop, Calendar
-from utils import generate_api_warszawa_url
+from utils import WarsawApi
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
@@ -181,8 +180,8 @@ def get_json_from_api(link: str) -> json:
         
 def create_stops_list() -> List[Stop]:
     stops = []
-    url = generate_api_warszawa_url(API_KEY, RESOURCE_ID)
-    json_string = get_json_from_api(url)
+    api = WarsawApi(apikey=API_KEY)
+    json_string = api.get_dbstore(resource_id=RESOURCE_ID)
     for stop_values in json_string['result']:
         unit = stop_values['values'][0]['value']
         post = stop_values['values'][1]['value']
@@ -323,12 +322,13 @@ def load_routes_to_MongoDB(ti) -> None:
     routes = create_routes_json(routes_file_name)
     for route in routes:
         my_collection.insert_one(route)  
+    
 
 ###############################################
 # DAG Definition
 ###############################################
-now = datetime.now()    
-
+now = datetime.now()
+                                              
 default_args = {
     "owner": "mklepacki",
     "depends_on_past": False,
