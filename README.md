@@ -34,7 +34,11 @@
    curl -sSL https://install.python-poetry.org | python3 -
    poetry install
    ```
-
+1. Install dependencies locally
+```bash
+pip install cryptography==36.0.2
+poetry install
+```
 ## Cleaning-up the environment
 To stop and delete containers, delete volumes with database data and download images, run `docker-compose down --volumes --rmi all`
 

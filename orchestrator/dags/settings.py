@@ -5,16 +5,16 @@ from dateutil.tz import tz
 
 
 SPARK_MASTER = "spark://spark:7077"
-SPARK_OUT_DIR = '/opt/spark/execution_scripts'
+SPARK_OUT_DIR = '/opt/spark/execution_scripts/'
+
 
 NOW = datetime.now()
-TODAY_DATETIME = datetime.now().astimezone(tz.gettz('Europe/Warsaw'))
+TO_ZONE = tz.gettz('Europe/Warsaw')
+TODAY_DATETIME = datetime.now().astimezone(TO_ZONE)
 TODAY_DATE = TODAY_DATETIME.strftime("%Y%m%d")
 TODAY_TIME = TODAY_DATETIME.strftime("%H%M%S")
 
-TRAM_FOLDER = os.path.join(SPARK_OUT_DIR, TODAY_DATE)
-
-API_WARSZAWA_URL = 'https://api.um.warszawa.pl/api/action/busestrams_get/'
+TRAM_FOLDER = f'{SPARK_OUT_DIR}{TODAY_DATE}/'
 
 ZTM_GENERAL_LINK = 'ftp://rozklady.ztm.waw.pl'
 
