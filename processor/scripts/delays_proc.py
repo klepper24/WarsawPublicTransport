@@ -1,3 +1,5 @@
+# flake8: noqa E712 (comparison to True should be 'if cond is True:' or 'if cond:')
+
 import os
 import sys
 from math import radians, cos, sin, asin, sqrt
@@ -33,12 +35,12 @@ class DelaysProcessor:
     def execute_script(self):
         stops = self._get_stops()
         route_coordinates = self._get_route_coordinates(stops)
-        calendar = self._get_calendar()
-        timetable = self._get_timetable(stops)
-        tram_stops = self._get_tram_stops(route_coordinates)
+        self._get_calendar()
+        self._get_timetable(stops)
+        self._get_tram_stops(route_coordinates)
         results = self._get_results()
-        previous_stops = self._get_previous_stops(results)
-        routes_order = self._get_routes_order(route_coordinates)
+        self._get_previous_stops(results)
+        self._get_routes_order(route_coordinates)
         direction = self._get_direction()
         # self._write_stops_data(stops)
         # self._write_tram_data(tram_stops)
@@ -153,7 +155,8 @@ class DelaysProcessor:
 
     def _get_results(self):
         results = self.spark.sql(
-            "SELECT distinct t.*, ti.Lines AS TT_Lines, date_format(ti.DepTime, 'HH:mm:ss') AS DepTime, ti.StopNo, ti.DayType, ti.Route , ti.Order, " +
+            "SELECT distinct t.*, ti.Lines AS TT_Lines, date_format(ti.DepTime, 'HH:mm:ss') " +
+            "AS DepTime, ti.StopNo, ti.DayType, ti.Route , ti.Order, " +
             "(unix_timestamp(to_timestamp(t.CurrTramTime))-unix_timestamp(to_timestamp(ti.DepTime))) AS Delay " +
             "FROM trams_stops AS t " +
             "INNER JOIN timetable AS ti " +
@@ -192,8 +195,10 @@ class DelaysProcessor:
         routes_window = Window.partitionBy().orderBy("line_nr", "route_nr", "min_time")
         routes_order = route_coordinates.select("line_nr", "route_nr", "stop_nr", "StopName", "min_time") \
             .withColumn("Prev_Stop_Route",
-                        func.when(route_coordinates.StopName != func.lag(route_coordinates.StopName).over(routes_window),
-                                  func.lag(route_coordinates.StopName).over(routes_window))) \
+                        func.when(
+                            route_coordinates.StopName != func.lag(route_coordinates.StopName).over(routes_window),
+                            func.lag(route_coordinates.StopName).over(routes_window))
+                        ) \
             .withColumn("PrevCorrected", func.when(func.col("Prev_Stop_Route").isNull() == True,
                                                    func.last(func.col("Prev_Stop_Route"), True).over(routes_window))
                         .otherwise(func.col("Prev_Stop_Route"))) \

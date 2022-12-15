@@ -16,7 +16,7 @@ from airflow.operators.python import PythonOperator
 
 import settings
 from models import TimeTable, Stop, Calendar
-from utils import WarsawApi
+from warsaw_api import WarsawApi
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
@@ -57,8 +57,8 @@ def download_general_ztm_data(ti) -> None:
         file.write(lines)
 
     ti.xcom_push(key="general_file_name", value=general_file_name)
-        
-        
+
+
 def extract_timetable_lines(ti) -> None:
     general_file_name = ti.xcom_pull(key='general_file_name')
     with open(f'{OUT_DIR}{general_file_name}', "rt", encoding="utf8") as file_in:
@@ -97,7 +97,7 @@ def extract_timetable() -> List[TimeTable]:
                     if 'Linia:' in line:
                         line_number = line.split()[1]
                     elif '*TR' in line:
-                        num_of_route = line.strip()[3:]
+                        num_of_route = line.strip()[3:]  # noqa: F841 (variable not used) @TODO - remove?
                     elif '*RP' in line or '#OP' in line:
                         try:
                             line = next(f)
@@ -116,7 +116,9 @@ def extract_timetable() -> List[TimeTable]:
                             hour, stop = line.split()
                             departure_time = convert_to_time(hour)
                             route, day_type, _ = stop.split('/')
-                            new_time_table = TimeTable(int(line_number), route, day_type, unit, post, str(departure_time), n)
+                            new_time_table = TimeTable(
+                                int(line_number), route, day_type, int(unit), post, str(departure_time), n
+                            )
                             time_table.append(new_time_table)
                             try:
                                 line = next(f)
@@ -126,7 +128,7 @@ def extract_timetable() -> List[TimeTable]:
     return time_table
 
 
-def load_timetable_to_MongoDB() -> None:
+def load_timetable_to_mongo_db() -> None:
     my_client = pymongo.MongoClient(settings.MONGO_URL)
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Timetable"]
@@ -134,7 +136,7 @@ def load_timetable_to_MongoDB() -> None:
     my_collection.drop()
     timetables = extract_timetable()
     for timetable in timetables:
-        my_collection.insert_one(timetable.obj_to_dict()) 
+        my_collection.insert_one(timetable.obj_to_dict())
 
 
 def extract_calendar_lines(general_file_name: str) -> List[Calendar]:
@@ -161,7 +163,7 @@ def extract_calendar_lines(general_file_name: str) -> List[Calendar]:
     return calendar_days
 
 
-def load_calendar_to_MongoDB(ti) -> None:
+def load_calendar_to_mongo_db(ti) -> None:
     my_client = pymongo.MongoClient(settings.MONGO_URL)
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Calendar"]
@@ -176,8 +178,8 @@ def load_calendar_to_MongoDB(ti) -> None:
 def get_json_from_api(link: str) -> json:
     response = requests.get(link)
     return json.loads(response.text)
-    
-        
+
+
 def create_stops_list() -> List[Stop]:
     stops = []
     api = WarsawApi(apikey=API_KEY)
@@ -198,7 +200,7 @@ def create_stops_list() -> List[Stop]:
     return stops
 
 
-def load_stops_to_MongoDB() -> None:
+def load_stops_to_mongo_db() -> None:
     my_client = pymongo.MongoClient(settings.MONGO_URL)
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Stops"]
@@ -206,10 +208,10 @@ def load_stops_to_MongoDB() -> None:
     my_collection.drop()
     stops_list = create_stops_list()
     for stop in stops_list:
-        my_collection.insert_one(stop.obj_to_dict())      
-        
-    my_collection.create_index([("coordinates", pymongo.GEOSPHERE)])        
-  
+        my_collection.insert_one(stop.obj_to_dict())
+
+    my_collection.create_index([("coordinates", pymongo.GEOSPHERE)])
+
 
 def extract_routes_lines(ti) -> None:
     general_file_name = ti.xcom_pull(key='general_file_name')
@@ -228,7 +230,7 @@ def extract_routes_lines(ti) -> None:
                             # there is no lines left
                             break
                 previous_line = line
-        
+
     ti.xcom_push(key="routes_output_file", value=routes_output_file)
 
 
@@ -312,7 +314,7 @@ def create_routes_json(input_file: str) -> List[Dict]:
     return routes_json
 
 
-def load_routes_to_MongoDB(ti) -> None:
+def load_routes_to_mongo_db(ti) -> None:
     my_client = pymongo.MongoClient(settings.MONGO_URL)
     my_database = my_client["WarsawPublicTransport"]
     my_collection = my_database["Routes"]
@@ -321,14 +323,14 @@ def load_routes_to_MongoDB(ti) -> None:
     routes_file_name = ti.xcom_pull(key='routes_output_file')
     routes = create_routes_json(routes_file_name)
     for route in routes:
-        my_collection.insert_one(route)  
-    
+        my_collection.insert_one(route)
+
 
 ###############################################
 # DAG Definition
 ###############################################
 now = datetime.now()
-                                              
+
 default_args = {
     "owner": "mklepacki",
     "depends_on_past": False,
@@ -342,7 +344,7 @@ default_args = {
 }
 
 with DAG(
-        dag_id="ztm_general_data", 
+        dag_id="ztm_general_data",
         description="This DAG imports general Warsaw Public Transport data",
         default_args=default_args,
 ) as dag:
@@ -353,41 +355,41 @@ with DAG(
         task_id="download_general_ztm_data",
         python_callable=download_general_ztm_data
     )
-    
+
     task_extract_lines = PythonOperator(
         task_id="extract_timetable_lines",
         python_callable=extract_timetable_lines
     )
-    
+
     task_load_timetable_to_MongoDB = PythonOperator(
         task_id="load_timetable_to_MongoDB",
-        python_callable=load_timetable_to_MongoDB
-    )    
+        python_callable=load_timetable_to_mongo_db
+    )
 
     task_remove_files = BashOperator(
         task_id="remove_files",
-        bash_command=f"rm {OUT_DIR}download* & rm {OUT_DIR}tram* & rm {OUT_DIR}*.7z"
+        bash_command=f"rm {OUT_DIR}download* && rm {OUT_DIR}tram* && rm {OUT_DIR}*.7z"
     )
-    
+
     task_load_calendar_to_MongoDB = PythonOperator(
         task_id="load_calendar_to_MongoDB",
-        python_callable=load_calendar_to_MongoDB
-    )  
+        python_callable=load_calendar_to_mongo_db
+    )
 
     task_load_stops_to_MongoDB = PythonOperator(
         task_id="load_stops_to_MongoDB",
-        python_callable=load_stops_to_MongoDB
-    )     
-    
+        python_callable=load_stops_to_mongo_db
+    )
+
     task_extract_routes_lines = PythonOperator(
         task_id="extract_routes_lines",
         python_callable=extract_routes_lines
-    ) 
+    )
 
     task_load_routes_to_MongoDB = PythonOperator(
         task_id="load_routes_to_MongoDB",
-        python_callable=load_routes_to_MongoDB
-    )     
+        python_callable=load_routes_to_mongo_db
+    )
 
     end = EmptyOperator(task_id="end", dag=dag)
 

@@ -1,4 +1,3 @@
-import settings
 import requests
 
 
@@ -26,8 +25,7 @@ class WarsawApi:
         params = {}
         if resource_id is not None:
             params["id"] = resource_id
-        self._dbstore = self._get(WarsawApi.ENDPOINT_DBSTORE, params)
-        return self._dbstore
+        return self._get(WarsawApi.ENDPOINT_DBSTORE, params)
 
     def get_busestrams(self, resource_id=None, resource_type=None):
         params = {}
