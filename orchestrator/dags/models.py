@@ -31,7 +31,7 @@ class Calendar:
     day: datetime
     day_types: list
 
-    def __init__(self, day: datetime, day_types: list):
+    def __init__(self, day: str, day_types: list):
         self.day = day
         self.day_types = day_types
 
@@ -40,7 +40,7 @@ class Calendar:
 
     def obj_to_dict(self) -> Dict:
         return self.__dict__
-        
+
 
 class Stop:
     unit: str
@@ -66,6 +66,6 @@ class Stop:
     def __str__(self):
         return f"{self.unit} {self.post} {self.unit_name} {self.street_id} {self.latitude} {self.longitude} " \
                f"{self.direction} {self.valid_from}"
-        
+
     def obj_to_dict(self) -> Dict:
         return self.__dict__

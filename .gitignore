@@ -96,3 +96,6 @@ orchestrator/plugins/*
 
 db/database/*
 !db/database/.gitkeep 
+
+processor/scripts/ARCHIVE/*
+processor/scripts/20*
