@@ -32,6 +32,15 @@ OUT_DIR = '/opt/airflow/dags/data/'
 ###############################################
 # Python functions
 ###############################################
+class MongoConnector:
+    def __init__(self, database_name="WarsawPublicTransport", database_url=settings.MONGO_URL):
+        self._client = pymongo.MongoClient(database_url)
+        self._database = self._client[database_name]
+
+    def get_collection(self, collection):
+        return self._database[collection]
+
+
 def download_general_ztm_data(ti) -> None:
     """
     download timetable .txt file from ftp server
@@ -129,14 +138,11 @@ def extract_timetable() -> List[TimeTable]:
 
 
 def load_timetable_to_mongo_db() -> None:
-    my_client = pymongo.MongoClient(settings.MONGO_URL)
-    my_database = my_client["WarsawPublicTransport"]
-    my_collection = my_database["Timetable"]
-
-    my_collection.drop()
+    timetable_collection = MongoConnector().get_collection('Timetable')
+    timetable_collection.drop()
     timetables = extract_timetable()
     for timetable in timetables:
-        my_collection.insert_one(timetable.obj_to_dict())
+        timetable_collection.insert_one(timetable.obj_to_dict())
 
 
 def extract_calendar_lines(general_file_name: str) -> List[Calendar]:
@@ -164,15 +170,12 @@ def extract_calendar_lines(general_file_name: str) -> List[Calendar]:
 
 
 def load_calendar_to_mongo_db(ti) -> None:
-    my_client = pymongo.MongoClient(settings.MONGO_URL)
-    my_database = my_client["WarsawPublicTransport"]
-    my_collection = my_database["Calendar"]
-
-    my_collection.drop()
+    calendar_collection = MongoConnector().get_collection('Calendar')
+    calendar_collection.drop()
     general_file_name = ti.xcom_pull(key='general_file_name')
     calendar_days = extract_calendar_lines(general_file_name)
     for calendar in calendar_days:
-        my_collection.insert_one(calendar.obj_to_dict())
+        calendar_collection.insert_one(calendar.obj_to_dict())
 
 
 def get_json_from_api(link: str) -> json:
@@ -201,16 +204,13 @@ def create_stops_list() -> List[Stop]:
 
 
 def load_stops_to_mongo_db() -> None:
-    my_client = pymongo.MongoClient(settings.MONGO_URL)
-    my_database = my_client["WarsawPublicTransport"]
-    my_collection = my_database["Stops"]
-
-    my_collection.drop()
+    stops_collection = MongoConnector().get_collection('Stops')
+    stops_collection.drop()
     stops_list = create_stops_list()
     for stop in stops_list:
-        my_collection.insert_one(stop.obj_to_dict())
+        stops_collection.insert_one(stop.obj_to_dict())
 
-    my_collection.create_index([("coordinates", pymongo.GEOSPHERE)])
+    stops_collection.create_index([("coordinates", pymongo.GEOSPHERE)])
 
 
 def extract_routes_lines(ti) -> None:
@@ -315,15 +315,12 @@ def create_routes_json(input_file: str) -> List[Dict]:
 
 
 def load_routes_to_mongo_db(ti) -> None:
-    my_client = pymongo.MongoClient(settings.MONGO_URL)
-    my_database = my_client["WarsawPublicTransport"]
-    my_collection = my_database["Routes"]
-
-    my_collection.drop()
+    routes_collection = MongoConnector().get_collection('Routes')
+    routes_collection.drop()
     routes_file_name = ti.xcom_pull(key='routes_output_file')
     routes = create_routes_json(routes_file_name)
     for route in routes:
-        my_collection.insert_one(route)
+        routes_collection.insert_one(route)
 
 
 ###############################################
