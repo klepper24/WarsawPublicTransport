@@ -146,6 +146,21 @@ def load_timetable_to_mongo_db() -> None:
 
 
 def extract_calendar_lines(general_file_name: str) -> List[Calendar]:
+    '''
+    Retrieves the *KA part from the input file, which consists of consecutive dates with a day type assigned to each
+    Example:
+        *KA  669
+           2021-01-01    6    D5  N5  TS  DS  NP  NO
+           2021-01-02    6    D6  N6  SB  DS  NP  NO
+           2021-01-03    6    D7  N7  TS  DS  NS  NO
+           ...
+    
+        Parameters:
+                general_file_name (str): A latest file which can be found at ftp://rozklady.ztm.waw.pl'
+                
+        Returns:
+                calendar_days (List[Calendar]):  list of Calendar's objects
+    '''
     calendar_days = []
     current_date = str(datetime.today()).split()[0]
     with open(f"{OUT_DIR}{general_file_name}", "rt", encoding="utf8") as file_in:
