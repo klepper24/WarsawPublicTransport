@@ -16,7 +16,7 @@ import settings
 DAG_DEFAULT_ARGS = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": datetime(settings.NOW.year, settings.NOW.month, settings.NOW.day, 23),
+    "start_date": datetime(settings.NOW.year, settings.NOW.month, settings.NOW.day, settings.DELAYS_PROCESSING_HOUR),
     "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,
