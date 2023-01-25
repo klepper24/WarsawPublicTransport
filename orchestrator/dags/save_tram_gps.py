@@ -7,6 +7,7 @@ from airflow import DAG
 from airflow.models import Variable
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
+from airflow.providers.http.sensors.http import HttpSensor
 
 import settings
 from warsaw_api import WarsawApi
@@ -47,44 +48,18 @@ with DAG(
         dag_id="save_tram_gps",
         description="This DAG saves tram's GPS signal every ~15-20 sec.",
         default_args=DAG_DEFAULT_ARGS,
-        schedule_interval=timedelta(minutes=1),
+        schedule_interval=timedelta(seconds=10),
         catchup=False,
 ) as dag:
 
     start = EmptyOperator(task_id="start", dag=dag)
 
-#    task_is_api_active = HttpSensor(
-#        task_id='is_api_active',
-#        http_conn_id='url_ztm_gps',
-#        endpoint='api/action/busestrams_get/',
-#        request_params={'type': '2', 'resource_id': resource_id, 'apikey' : api_key}
-#    )
 
     task_save_tram_gps = PythonOperator(
         task_id="save_tram_gps",
         python_callable=save_tram_gps
     )
-
-    wait = PythonOperator(
-        task_id="delay_python_task",
-        python_callable=lambda: time.sleep(20)
-    )
-    
-    task_save_tram_gps2 = PythonOperator(
-        task_id="save_tram_gps2",
-        python_callable=save_tram_gps
-    )  
-
-    wait2 = PythonOperator(
-        task_id="delay_python_task2",
-        python_callable=lambda: time.sleep(20)
-    )    
-
-    task_save_tram_gps3 = PythonOperator(
-        task_id="save_tram_gps3",
-        python_callable=save_tram_gps
-    )     
-
+  
     end = EmptyOperator(task_id="end", dag=dag)
 
-    start >> task_save_tram_gps >> wait >> task_save_tram_gps2 >> wait2 >> task_save_tram_gps3 >> end
+    start >> task_save_tram_gps >> end
