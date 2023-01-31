@@ -49,3 +49,13 @@ CREATE TABLE "WarsawTransportState"."dbo"."trams" (
   "brigade" varchar,
   "line_nr" varchar
 );
+
+ALTER TABLE "WarsawTransportState"."dbo"."tram_states" ADD CONSTRAINT fk_tramstates_trams FOREIGN KEY ("tram_id") REFERENCES "WarsawTransportState"."dbo"."trams" ("id");
+
+ALTER TABLE "WarsawTransportState"."dbo"."tram_states" ADD CONSTRAINT fk_tramstates_routevariants FOREIGN KEY ("route_variant_id") REFERENCES "WarsawTransportState"."dbo"."route_variants" ("id");
+
+ALTER TABLE "WarsawTransportState"."dbo"."route_variants" ADD CONSTRAINT fk_routevariants_stops FOREIGN KEY ("stop_id") REFERENCES "WarsawTransportState"."dbo"."stops" ("id");
+
+ALTER TABLE "WarsawTransportState"."dbo"."route_variants" ADD CONSTRAINT fk_routevariants_routes FOREIGN KEY ("route_id") REFERENCES "WarsawTransportState"."dbo"."routes" ("id");
+
+ALTER TABLE "WarsawTransportState"."dbo"."timetables" ADD CONSTRAINT fk_timetables_stops FOREIGN KEY ("stop_id") REFERENCES "WarsawTransportState"."dbo"."stops" ("id");
