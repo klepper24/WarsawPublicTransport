@@ -27,10 +27,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 try:
     API_KEY = Variable.get("api_key")
 except KeyError:
-    default_dummy_api_key = 'dummy-incorrect-api-key'
-    API_KEY = os.getenv('WARSAW_API_KEY', default=default_dummy_api_key)
-    if API_KEY == default_dummy_api_key:
-        print('Warning! You are using dummy incorect key for Warsaw API!')
+    API_KEY = os.getenv('WARSAW_API_KEY', default='dummy-incorrect-api-key')
 
 RESOURCE_ID = 'ab75c33d-3a26-4342-b36a-6e5fef0a3ac3'
 OUT_DIR = settings.AIRFLOW_OUT_DIR

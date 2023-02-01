@@ -18,10 +18,7 @@ from .warsaw_api import WarsawApi
 try:
     API_KEY = Variable.get("api_key")
 except KeyError:
-    default_dummy_api_key = 'dummy-incorrect-api-key'
-    API_KEY = os.getenv('WARSAW_API_KEY', default=default_dummy_api_key)
-    if API_KEY == default_dummy_api_key:
-        print('Warning! You are using dummy incorect key for Warsaw API!')
+    API_KEY = os.getenv('WARSAW_API_KEY', default='dummy-incorrect-api-key')
 
 RESOURCE_ID = 'f2e5503e927d-4ad3-9500-4ab9e55deb59'
 
