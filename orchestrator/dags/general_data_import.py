@@ -14,9 +14,9 @@ from airflow.operators.bash import BashOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 
-import settings
-from models import TimeTable, Stop, Calendar
-from warsaw_api import WarsawApi
+from . import settings
+from .models import TimeTable, Stop, Calendar
+from .warsaw_api import WarsawApi
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
@@ -24,9 +24,16 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 ###############################################
 # Parameters
 ###############################################
-API_KEY = Variable.get("api_key")
+try:
+    API_KEY = Variable.get("api_key")
+except KeyError:
+    default_dummy_api_key = 'dummy-incorrect-api-key'
+    API_KEY = os.getenv('WARSAW_API_KEY', default=default_dummy_api_key)
+    if API_KEY == default_dummy_api_key:
+        print('Warning! You are using dummy incorect key for Warsaw API!')
+
 RESOURCE_ID = 'ab75c33d-3a26-4342-b36a-6e5fef0a3ac3'
-OUT_DIR = '/opt/airflow/dags/data/'
+OUT_DIR = settings.AIRFLOW_OUT_DIR
 
 
 ###############################################
@@ -154,10 +161,10 @@ def extract_calendar_lines(general_file_name: str) -> List[Calendar]:
            2021-01-02    6    D6  N6  SB  DS  NP  NO
            2021-01-03    6    D7  N7  TS  DS  NS  NO
            ...
-    
+
         Parameters:
                 general_file_name (str): A latest file which can be found at ftp://rozklady.ztm.waw.pl'
-                
+
         Returns:
                 calendar_days (List[Calendar]):  list of Calendar's objects
     '''

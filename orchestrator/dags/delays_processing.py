@@ -9,13 +9,20 @@ from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
-import settings
-from warsaw_api import WarsawApi
+from . import settings
+from .warsaw_api import WarsawApi
 
 ###############################################
 # Parameters
 ###############################################
-API_KEY = Variable.get("api_key")
+try:
+    API_KEY = Variable.get("api_key")
+except KeyError:
+    default_dummy_api_key = 'dummy-incorrect-api-key'
+    API_KEY = os.getenv('WARSAW_API_KEY', default=default_dummy_api_key)
+    if API_KEY == default_dummy_api_key:
+        print('Warning! You are using dummy incorect key for Warsaw API!')
+
 RESOURCE_ID = 'f2e5503e927d-4ad3-9500-4ab9e55deb59'
 
 

@@ -27,3 +27,5 @@ MONGO_URL = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/
 MSSQL_HOST = os.getenv('MSSQL_HOST', default='git_ms-sql_1')
 SQLSERVER_USERNAME = os.getenv('SQLSERVER_USERNAME', default='SA')
 SQLSERVER_PASSWORD = os.getenv('SQLSERVER_PASSWORD', default='mssql1Ipw')
+
+AIRFLOW_OUT_DIR = os.getenv('AIRFLOW_OUT_DIR', default='/opt/airflow/dags/data/')

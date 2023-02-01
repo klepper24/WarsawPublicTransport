@@ -84,18 +84,20 @@ venv.bak/
 .DS_Store
 
 orchestrator/dags/data/*
-!orchestrator/dags/data/.gitkeep 
+!orchestrator/dags/data/.gitkeep
 
 orchestrator/logs/*
 !orchestrator/logs/scheduler
 orchestrator/logs/scheduler/*
-!orchestrator/logs/scheduler/.gitkeep 
+!orchestrator/logs/scheduler/.gitkeep
 
 orchestrator/plugins/*
-!orchestrator/plugins/.gitkeep 
+!orchestrator/plugins/.gitkeep
+
+orchestrator/tests/data/*
 
 db/database/*
-!db/database/.gitkeep 
+!db/database/.gitkeep
 
 processor/scripts/ARCHIVE/*
 processor/scripts/20*

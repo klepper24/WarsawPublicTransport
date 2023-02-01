@@ -14,7 +14,7 @@ py7zr = "^0.20.2"
 pymongo = "^4.3.3"
 wget = "^3.2"
 wheel = "^0.38.4"
-apache-airflow = {version = "2.4.3", extras = ["celery"]}
+apache-airflow = "2.4.3"
 
 [tool.poetry.group.dev.dependencies]
 tox = "^3.27.1"
