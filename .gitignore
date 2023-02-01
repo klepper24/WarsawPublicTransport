@@ -95,6 +95,7 @@ orchestrator/plugins/*
 !orchestrator/plugins/.gitkeep
 
 orchestrator/tests/data/*
+!orchestrator/tests/data/.gitkeep
 
 db/database/*
 !db/database/.gitkeep
