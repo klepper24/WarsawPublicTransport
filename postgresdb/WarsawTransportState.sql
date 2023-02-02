@@ -2,13 +2,14 @@ CREATE SCHEMA "dbo";
 
 CREATE TABLE "WarsawTransportState"."dbo"."stops" (
   "id" int PRIMARY KEY,
-  "full_name" int,
-  "longitude" double precision,
-  "latitude" double precision,
+  "full_name" varchar,
+  "stop_longitude" double precision,
+  "stop_latitude" double precision,
   "street" varchar,
   "unit" varchar,
   "post" varchar,
-  "is_depot" int
+  "is_depot" int,
+  "created_at" timestamp DEFAULT (now())
 );
 
 CREATE TABLE "WarsawTransportState"."dbo"."tram_states" (
@@ -17,37 +18,41 @@ CREATE TABLE "WarsawTransportState"."dbo"."tram_states" (
   "stop_state" varchar,
   "tram_id" int,
   "route_variant_id" int,
-  "longitude" double precision,
-  "latitude" double precision,
+  "tram_longitude" double precision,
+  "tram_latitude" double precision,
   "distance" int
 );
 
 CREATE TABLE "WarsawTransportState"."dbo"."routes" (
   "id" int PRIMARY KEY,
-  "name" varchar,
-  "stops_cnt" int
+  "name" varchar UNIQUE,
+  "stops_cnt" int,
+  "created_at" timestamp DEFAULT (now())
 );
 
 CREATE TABLE "WarsawTransportState"."dbo"."route_variants" (
   "id" int PRIMARY KEY,
-  "stop_id" int,
-  "route_id" int,
-  "sequence_nr" int
+  "stop_id" int NOT NULL,
+  "route_id" int NOT NULL,
+  "stop_sequence_nr" int
 );
 
 CREATE TABLE "WarsawTransportState"."dbo"."timetables" (
   "id" int PRIMARY KEY,
   "day_type" varchar,
-  "departure_time" timestamp,
-  "sequence_nr" int,
-  "stop_id" int
+  "departure_time" time,
+  "departure_time_sequence_nr" int,
+  "stop_id" int NOT NULL,
+  "line_nr" varchar,
+  "created_at" timestamp DEFAULT (now())
 );
 
 CREATE TABLE "WarsawTransportState"."dbo"."trams" (
   "id" int PRIMARY KEY,
   "vehicle_nr" varchar,
   "brigade" varchar,
-  "line_nr" varchar
+  "line_nr" varchar,
+  "created_at" timestamp DEFAULT (now())
 );
 
 ALTER TABLE "WarsawTransportState"."dbo"."tram_states" ADD CONSTRAINT fk_tramstates_trams FOREIGN KEY ("tram_id") REFERENCES "WarsawTransportState"."dbo"."trams" ("id");
