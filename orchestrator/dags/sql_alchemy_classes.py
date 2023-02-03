@@ -1,11 +1,11 @@
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Float
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Float, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
-base = declarative_base()
+Base = declarative_base()
 
 
-class Stops(base):
+class Stops(Base):
     _tablename_ = "stops"
 
     unit_post = Column(Integer, primary_key=True)
@@ -15,23 +15,11 @@ class Stops(base):
     street = Column(String)
     unit = Column(String)
     post = Column(String)
-    is_depot = Column(Integer)
-    create_at = Column(DateTime)
-
-    def __init__(self, unit_post: int, full_name: str, stop_longitude: float, stop_latitude: float, street: str,
-                 unit: str, post: str, is_depot: int, create_at: datetime):
-        self.unit_post = unit_post
-        self.full_name = full_name
-        self.stop_longitude = stop_longitude
-        self.stop_latitude = stop_latitude
-        self.street = street
-        self.unit = unit
-        self.post = post
-        self.is_depot = is_depot
-        self.create_at = create_at
+    is_depot = Column(Boolean)
+    created_at = Column(DateTime)
 
 
-class Routes(base):
+class Routes(Base):
     _tablename_ = "routes"
 
     id = Column(Integer, primary_key=True)
@@ -39,14 +27,8 @@ class Routes(base):
     stops_cnt = Column(Integer)
     created_at = Column(DateTime)
 
-    def __init__(self, id: int, name: str, stops_cnt: int, created_at: datetime):
-        self.id = id
-        self.name = name
-        self.stops_cnt = stops_cnt
-        self.created_at = created_at
 
-
-class Trams(base):
+class Trams(Base):
     _tablename_ = "trams"
 
     id = Column(Integer, primary_key=True)
@@ -55,15 +37,8 @@ class Trams(base):
     line_nr = Column(String)
     created_at = Column(datetime)
 
-    def __init__(self, id: int, vehicle_nr: str, brigade: str, line_nr: str, created_at: datetime):
-        self.id = id
-        self.vehicle_nr = vehicle_nr
-        self.brigade = brigade
-        self.line_nr = line_nr
-        self.created_at = created_at
 
-
-class Timetables(base):
+class Timetables(Base):
     _tablename_ = "timetables"
 
     id = Column(Integer, primary_key=True)
@@ -74,18 +49,8 @@ class Timetables(base):
     line_nr = Column(String)
     created_at = Column(DateTime)
 
-    def __init__(self, id: int, day_type: str, departure_time: datetime, departure_time_sequence_nr: int, stop_id: int,
-                 line_nr: str, created_at: datetime):
-        self.id = id
-        self.day_type = day_type
-        self.departure_time = departure_time
-        self.departure_time_sequence_nr = departure_time_sequence_nr
-        self.stop_id = stop_id
-        self.line_nr = line_nr
-        self.created_at = created_at
 
-
-class RouteVariants(base):
+class RouteVariants(Base):
     _tablename_ = "route_variants"
 
     id = Column(Integer, primary_key=True)
@@ -93,14 +58,8 @@ class RouteVariants(base):
     route_id = Column(Integer, ForeignKey("routes.id"))
     stop_sequence_nr = Column(Integer)
 
-    def __init__(self, id: int, stop_id: int, route_id: int, stop_sequence_nr: int):
-        self.id = id
-        self.stop_id = stop_id
-        self.route_id = route_id
-        self.stop_sequence_nr = stop_sequence_nr
 
-
-class TramStates(base):
+class TramStates(Base):
     _tablename_ = "tram_states"
 
     id = Column(Integer, primary_key=True)
@@ -111,14 +70,3 @@ class TramStates(base):
     tram_longitude = Column(Float)
     tram_latitude = Column(Float)
     distance = Column(Integer)
-
-    def __init__(self, id: int, current_tram_time: datetime, stop_state: str, tram_id: int, route_variant_id: int,
-                 tram_longitude: float, tram_latitude: float, distance: int):
-        self.id = id
-        self.current_tram_time = current_tram_time
-        self.stop_state = stop_state
-        self.tram_id = tram_id
-        self.route_variant_id = route_variant_id
-        self.tram_longitude = tram_longitude
-        self.tram_latitude = tram_latitude
-        self.distance = distance
