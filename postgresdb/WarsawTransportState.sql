@@ -8,7 +8,7 @@ CREATE TABLE "WarsawTransportState"."dbo"."stops" (
   "street" varchar,
   "unit" varchar,
   "post" varchar,
-  "is_depot" int,
+  "is_depot" boolean,
   "created_at" timestamp DEFAULT (now())
 );
 
