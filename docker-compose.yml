@@ -370,7 +370,6 @@ services:
     networks:
         - internal-network
 
-
 volumes:
   postgres-db-volume:
   
