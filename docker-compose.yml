@@ -351,7 +351,24 @@ services:
       - ./processor/scripts:/opt/spark/execution_scripts
     restart: always
     networks:
-        - internal-network             
+        - internal-network
+
+  postgres-db:
+    image: docker.io/bitnami/postgresql:15
+    environment:
+      - POSTGRESQL_USERNAME=my_user
+      - POSTGRESQL_PASSWORD=password123
+      - POSTGRESQL_DATABASE=WarsawTransportState
+      - POSTGRESQL_POSTGRES_PASSWORD=postgres123
+    ports:
+      - 5432:5432
+    volumes:
+      - ./postgresdb/database:/bitnami/postgresql
+      - ./postgresdb/WarsawTransportState.sql:/docker-entrypoint-initdb.d/WarsawTransportState.sql
+
+    restart: always
+    networks:
+        - internal-network
 
 volumes:
   postgres-db-volume:
