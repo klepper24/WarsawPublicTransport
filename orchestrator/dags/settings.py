@@ -14,6 +14,8 @@ TODAY_DATETIME = datetime.now().astimezone(TO_ZONE)
 TODAY_DATE = TODAY_DATETIME.strftime("%Y%m%d")
 TODAY_TIME = TODAY_DATETIME.strftime("%H%M%S")
 
+DELAYS_PROCESSING_HOUR = 23
+
 TRAM_FOLDER = f'{SPARK_OUT_DIR}{TODAY_DATE}/'
 
 ZTM_GENERAL_LINK = 'ftp://rozklady.ztm.waw.pl'
