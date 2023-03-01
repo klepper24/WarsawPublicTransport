@@ -1,21 +1,23 @@
 import json
 import os
-import time
 from datetime import timedelta, datetime
 
 from airflow import DAG
 from airflow.models import Variable
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
-from airflow.providers.http.sensors.http import HttpSensor
 
-import settings
-from warsaw_api import WarsawApi
+from . import settings
+from .warsaw_api import WarsawApi
 
 ###############################################
 # Parameters
 ###############################################
-API_KEY = Variable.get("api_key")
+try:
+    API_KEY = Variable.get("api_key")
+except KeyError:
+    API_KEY = os.getenv('WARSAW_API_KEY', default='dummy-incorrect-api-key')
+
 RESOURCE_ID = 'f2e5503e927d-4ad3-9500-4ab9e55deb59'
 
 
@@ -54,12 +56,11 @@ with DAG(
 
     start = EmptyOperator(task_id="start", dag=dag)
 
-
     task_save_tram_gps = PythonOperator(
         task_id="save_tram_gps",
         python_callable=save_tram_gps
     )
-  
+
     end = EmptyOperator(task_id="end", dag=dag)
 
     start >> task_save_tram_gps >> end

@@ -1,12 +1,12 @@
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Float, Boolean
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
+
 
 Base = declarative_base()
 
 
 class Stops(Base):
-    _tablename_ = "stops"
+    __tablename__ = "stops"
 
     unit_post = Column(Integer, primary_key=True)
     full_name = Column(String)
@@ -20,7 +20,7 @@ class Stops(Base):
 
 
 class Routes(Base):
-    _tablename_ = "routes"
+    __tablename__ = "routes"
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
@@ -29,17 +29,17 @@ class Routes(Base):
 
 
 class Trams(Base):
-    _tablename_ = "trams"
+    __tablename__ = "trams"
 
     id = Column(Integer, primary_key=True)
     vehicle_nr = Column(String)
     brigade = Column(String)
     line_nr = Column(String)
-    created_at = Column(datetime)
+    created_at = Column(DateTime)
 
 
 class Timetables(Base):
-    _tablename_ = "timetables"
+    __tablename__ = "timetables"
 
     id = Column(Integer, primary_key=True)
     day_type = Column(String)
@@ -51,7 +51,7 @@ class Timetables(Base):
 
 
 class RouteVariants(Base):
-    _tablename_ = "route_variants"
+    __tablename__ = "route_variants"
 
     id = Column(Integer, primary_key=True)
     stop_id = Column(Integer, ForeignKey("stops.unit_post"))
@@ -60,7 +60,7 @@ class RouteVariants(Base):
 
 
 class TramStates(Base):
-    _tablename_ = "tram_states"
+    __tablename__ = "tram_states"
 
     id = Column(Integer, primary_key=True)
     current_tram_time = Column(DateTime)
