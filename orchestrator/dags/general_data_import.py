@@ -14,9 +14,9 @@ from airflow.operators.bash import BashOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 
-from . import settings
-from .models import TimeTable, Stop, Calendar
-from .warsaw_api import WarsawApi
+import settings
+from models import TimeTable, Stop, Calendar
+from warsaw_api import WarsawApi
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
