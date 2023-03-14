@@ -363,7 +363,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - ./postgresdb/database:/bitnami/postgresql
+      - postgres-db-bitnami-volume:/bitnami/postgresql
       - ./postgresdb/WarsawTransportState.sql:/docker-entrypoint-initdb.d/WarsawTransportState.sql
 
     restart: always
@@ -372,6 +372,7 @@ services:
 
 volumes:
   postgres-db-volume:
+  postgres-db-bitnami-volume:
   
 networks:
   internal-network:
