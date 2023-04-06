@@ -31,3 +31,5 @@ SQLSERVER_USERNAME = os.getenv('SQLSERVER_USERNAME', default='SA')
 SQLSERVER_PASSWORD = os.getenv('SQLSERVER_PASSWORD', default='mssql1Ipw')
 
 AIRFLOW_OUT_DIR = os.getenv('AIRFLOW_OUT_DIR', default='/opt/airflow/dags/data/')
+
+POSTGRES_URL = "postgresql://my_user:password123@localhost:5432/WarsawTransportState"
