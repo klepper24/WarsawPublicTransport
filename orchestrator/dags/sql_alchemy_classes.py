@@ -21,8 +21,11 @@ class Stops(Base):
 
 class Routes(Base):
     __tablename__ = "routes"
+    __table_args__ = {"schema": "dbo"}
 
     id = Column(Integer, primary_key=True)
+    line_name = Column(String, unique=True)
+    line_nr = Column(String)
     name = Column(String)
     stops_cnt = Column(Integer)
     created_at = Column(DateTime)
