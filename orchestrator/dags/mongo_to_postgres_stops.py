@@ -1,24 +1,18 @@
 import os
+from typing import Collection
+
 import pymongo
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 from sql_alchemy_classes import Timetables, Stops
 from sqlalchemy.exc import IntegrityError
-from typing import Collection
 
-
-# temporary solution
-MONGO_HOST = os.getenv('MONGO_HOST', default='localhost')
-MONGO_USER = os.getenv('MONGO_USER', default='root')
-MONGO_PASSWORD = os.getenv('MONGO_PASSWORD', default='pass12345')
-MONGO_PORT = os.getenv('MONGO_PORT', default='27017')
-MONGO_URL = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/"
-POSTGRES_URL = "postgresql://my_user:password123@localhost:5432/WarsawTransportState"
+import settings
 
 
 def _get_mongo_url() -> str:
-    return f'{MONGO_URL}.?authSource=admin'
+    return f'{settings.MONGO_URL}.?authSource=admin'
 
 
 def get_mongo_collection(collection_name: str) -> Collection:
@@ -41,28 +35,32 @@ def clean_stops_unit(mongo_collection: Collection) -> None:
     print(x.deleted_count, " documents deleted.")
 
 
-def send_stops_to_postgres() -> None:
+def send_stops_to_postgres() -> [int, int]:
     stops_collection = get_mongo_collection('Stops')
-    postgres_session = create_postgres_session(POSTGRES_URL)
+    postgres_session = create_postgres_session(settings.POSTGRES_URL)
     clean_stops_unit(stops_collection)
 
     with postgres_session() as session:
-        # exclude columns: _id, street_id, valid_from
-        for x in stops_collection.find({}, {"_id": 0, "street_id": 0, "valid_from": 0}):
-            print(x)
-            stops = Stops(id=int(x["unit"] + x["post"]), full_name=x["unit_name"],
-                          stop_longitude=x["longitude"], stop_latitude=x["latitude"],
-                          street=x["direction"], unit=x["unit"], post=x["post"], is_depot=1,
-                          created_at=datetime.now())
-            session.add(stops)
+        rollbacked_documents = 0
+        committed_documents = 0
+        for x in stops_collection.find({}):
+            stop = Stops(id=int(x["unit"] + x["post"]), full_name=x["unit_name"],
+                         stop_longitude=x["longitude"], stop_latitude=x["latitude"],
+                         street=x["direction"], unit=x["unit"], post=x["post"], is_depot=0,
+                         created_at=datetime.now())
+            session.add(stop)
             try:
                 session.commit()
+                committed_documents += 1
             except IntegrityError:
                 print("1st try: An IntegrityError has occurred")
                 # do not commit this row
                 session.rollback()
+                rollbacked_documents += 1
                 continue
+    return committed_documents, rollbacked_documents
 
 
 if __name__ == "__main__":
     send_stops_to_postgres()
+
