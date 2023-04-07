@@ -25,14 +25,10 @@ CREATE TABLE "WarsawTransportState"."dbo"."tram_states" (
 
 CREATE TABLE "WarsawTransportState"."dbo"."routes" (
   "id" int PRIMARY KEY,
-  "line_name" varchar UNIQUE,
-  "line_nr" varchar,
-  "name" varchar,
+  "name" varchar UNIQUE,
   "stops_cnt" int,
   "created_at" timestamp DEFAULT (now())
 );
-
-COMMENT ON COLUMN "WarsawTransportState"."dbo"."routes"."line_name" is 'Concatenation of line_nr and name';
 
 CREATE TABLE "WarsawTransportState"."dbo"."route_variants" (
   "id" int PRIMARY KEY,
