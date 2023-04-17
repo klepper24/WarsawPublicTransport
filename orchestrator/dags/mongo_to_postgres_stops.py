@@ -1,4 +1,3 @@
-import os
 from typing import Collection
 
 import pymongo
