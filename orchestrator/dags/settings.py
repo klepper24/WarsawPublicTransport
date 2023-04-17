@@ -21,6 +21,7 @@ TRAM_FOLDER = f'{SPARK_OUT_DIR}{TODAY_DATE}/'
 ZTM_GENERAL_LINK = 'ftp://rozklady.ztm.waw.pl'
 
 MONGO_HOST = os.getenv('MONGO_HOST', default='git_mongo-python_1')
+#MONGO_HOST = os.getenv('MONGO_HOST', default='localhost')
 MONGO_USER = os.getenv('MONGO_USER', default='root')
 MONGO_PASSWORD = os.getenv('MONGO_PASSWORD', default='pass12345')
 MONGO_PORT = os.getenv('MONGO_PORT', default='27017')

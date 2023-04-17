@@ -7,8 +7,9 @@ Base = declarative_base()
 
 class Stops(Base):
     __tablename__ = "stops"
+    __table_args__ = {"schema": "dbo"}
 
-    unit_post = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
     full_name = Column(String)
     stop_longitude = Column(Float)
     stop_latitude = Column(Float)
@@ -21,6 +22,7 @@ class Stops(Base):
 
 class Routes(Base):
     __tablename__ = "routes"
+    __table_args__ = {"schema": "dbo"}
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
@@ -30,6 +32,7 @@ class Routes(Base):
 
 class Trams(Base):
     __tablename__ = "trams"
+    __table_args__ = {"schema": "dbo"}
 
     id = Column(Integer, primary_key=True)
     vehicle_nr = Column(String)
@@ -40,6 +43,7 @@ class Trams(Base):
 
 class Timetables(Base):
     __tablename__ = "timetables"
+    __table_args__ = {"schema": "dbo"}
 
     id = Column(Integer, primary_key=True)
     day_type = Column(String)
@@ -52,6 +56,7 @@ class Timetables(Base):
 
 class RouteVariants(Base):
     __tablename__ = "route_variants"
+    __table_args__ = {"schema": "dbo"}
 
     id = Column(Integer, primary_key=True)
     stop_id = Column(Integer, ForeignKey("stops.unit_post"))
@@ -61,6 +66,7 @@ class RouteVariants(Base):
 
 class TramStates(Base):
     __tablename__ = "tram_states"
+    __table_args__ = {"schema": "dbo"}
 
     id = Column(Integer, primary_key=True)
     current_tram_time = Column(DateTime)
