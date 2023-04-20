@@ -3,11 +3,10 @@ from typing import Collection
 import pymongo
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime
-from orchestrator.dags.sql_alchemy_classes import Timetables, Stops
-from sqlalchemy.exc import IntegrityError
-
+from sql_alchemy_classes import Timetables
 from orchestrator.dags import settings
+from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 
 
 def _get_mongo_url() -> str:
@@ -27,27 +26,23 @@ def create_postgres_session(postgres_url: str):
     return sessionmaker(source_engine)
 
 
-def clean_stops_unit(mongo_collection: Collection) -> None:
-    # units which start with 'R'
-    query = {"unit": {"$regex": "^R"}}
-    x = mongo_collection.delete_many(query)
-    print(x.deleted_count, " documents deleted.")
-
-
-def send_stops_to_postgres() -> [int, int]:
-    stops_collection = get_mongo_collection('Stops')
+def send_timetables_to_postgres() -> [int, int]:
+    stops_collection = get_mongo_collection('Timetable')
     postgres_session = create_postgres_session(settings.POSTGRES_URL)
-    clean_stops_unit(stops_collection)
+    # clean_stops_unit(stops_collection)
 
     with postgres_session() as session:
         rollbacked_documents = 0
         committed_documents = 0
+        id = 0
         for x in stops_collection.find({}):
-            stop = Stops(id=int(x["unit"] + x["post"]), full_name=x["unit_name"],
-                         stop_longitude=x["longitude"], stop_latitude=x["latitude"],
-                         street=x["direction"], unit=x["unit"], post=x["post"], is_depot=0,
-                         created_at=datetime.now())
-            session.add(stop)
+            id += 1
+            timetable = Timetables(id=id, day_type=x["day_type"],
+                                   departure_time=x["departure_time"], departure_time_sequence_nr=x["order"],
+                                   stop_id=int(str(x["unit"]) + x["post"]), line_nr=x["line"],
+                                   created_at=datetime.now())
+
+            session.add(timetable)
             try:
                 session.commit()
                 committed_documents += 1
@@ -61,5 +56,4 @@ def send_stops_to_postgres() -> [int, int]:
 
 
 if __name__ == "__main__":
-   send_stops_to_postgres()
-
+    send_timetables_to_postgres()
