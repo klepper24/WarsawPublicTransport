@@ -1,18 +1,20 @@
+from itertools import tee
 from datetime import datetime
-import os
 from typing import Collection
 
 import pymongo
 from sqlalchemy import create_engine
-from sql_alchemy_classes import Routes
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql import text
 
 import settings
+from sql_alchemy_classes import Routes
 
 
 def _get_mongo_url() -> str:
-    return f'{MONGO_URL}.?authSource=admin'
+    print(settings.MONGO_URL)
+    return f'{settings.MONGO_URL}.?authSource=admin'
 
 
 def get_mongo_collection(collection_name: str) -> Collection:
@@ -28,40 +30,51 @@ def create_postgres_session(postgres_url: str):
     return sessionmaker(source_engine)
 
 
+def map_routes_to_postgres_object(routes: object) -> object:
+    id_nr = 1
+    for doc in routes:
+        route = Routes(id=id_nr, line_name=doc["line_nr"] + doc["routes"]["route_nr"],
+                       line_nr=doc["line_nr"], name=doc["routes"]["route_nr"],
+                       stops_cnt=doc["routes"]["number_of_stops"],
+                       created_at=datetime.now())
+        id_nr += 1
+        yield route
+
+
 def send_routes_to_postgres() -> None:
     routes_collection = get_mongo_collection('Routes')
-    agg_routes = routes_collection.aggregate(
-    [
-        {
-            $unset: ["_id", "number_of_routes", "routes.stops"]
-        },
-        {
-            $unwind: "$routes"
-        }
-    ])
+    pipeline = [
+        {"$unset": ["_id", "number_of_routes", "routes.stops"]},
+        {"$unwind": "$routes"}
+    ]
+    agg_routes = routes_collection.aggregate(pipeline)
+
+    mapped_routes = map_routes_to_postgres_object(agg_routes)
+    mapped_routes, mapped_routes_backup = tee(mapped_routes)
+    generated_mapped_routes = (row for row in mapped_routes)
+
     postgres_session = create_postgres_session(settings.POSTGRES_URL)
 
     with postgres_session() as session:
-        session.execute('''TRUNCATE TABLE routes''')
+        session.execute(text('TRUNCATE TABLE dbo.routes CASCADE'))
         session.commit()
-        id_nr = 1
-        for doc in agg_routes:
-            print(x)
-            route = Routes(id=id_nr, line_name=doc["line_nr"] + doc["routes"]["route_nr"]
-                          line_nr=doc["line_nr"], name=doc["routes"]["route_nr"],
-                          stops_cnt=doc["routes"]["number_of_stops"],
-                          created_at=datetime.now())
-            session.add(route)
-            try:
-                session.commit()
-            except IntegrityError:
-                print("1st try: An IntegrityError has occurred")
-                # do not commit this row
-                session.rollback()
-                continue
-            finally:
-                id_nr += 1
+        try:
+            session.bulk_save_objects(generated_mapped_routes)
+            session.commit()
+        except IntegrityError:
+            print("1st try: An IntegrityError has occurred")
+            # do not commit this row
+            session.rollback()
+            for route in mapped_routes_backup:
+                session.add(route)
+                try:
+                    session.commit()
+                except IntegrityError:
+                    print("2nd try: An IntegrityError has occurred")
+                    # do not commit this row
+                    session.rollback()
 
 
 if __name__ == "__main__":
     send_routes_to_postgres()
+    
