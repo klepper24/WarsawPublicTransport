@@ -16,7 +16,6 @@ class Stops(Base):
     street = Column(String)
     unit = Column(String)
     post = Column(String)
-    is_depot = Column(Boolean)
     created_at = Column(DateTime)
 
 
@@ -78,3 +77,4 @@ class TramStates(Base):
     tram_longitude = Column(Float)
     tram_latitude = Column(Float)
     distance = Column(Integer)
+    is_depot = Column(Boolean)

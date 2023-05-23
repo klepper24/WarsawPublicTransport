@@ -42,10 +42,11 @@ def send_stops_to_postgres() -> [int, int]:
     with postgres_session() as session:
         rollbacked_documents = 0
         committed_documents = 0
+        session.execute("TRUNCATE TABLE dbo.stops CASCADE")
         for x in stops_collection.find({}):
             stop = Stops(id=int(x["unit"] + x["post"]), full_name=x["unit_name"],
                          stop_longitude=x["longitude"], stop_latitude=x["latitude"],
-                         street=x["direction"], unit=x["unit"], post=x["post"], is_depot=0,
+                         street=x["direction"], unit=x["unit"], post=x["post"],
                          created_at=datetime.now())
             session.add(stop)
             try:
