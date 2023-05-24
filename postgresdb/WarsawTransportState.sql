@@ -8,7 +8,6 @@ CREATE TABLE "WarsawTransportState"."dbo"."stops" (
   "street" varchar,
   "unit" varchar,
   "post" varchar,
-  "is_depot" boolean,
   "created_at" timestamp DEFAULT (now())
 );
 
@@ -20,7 +19,8 @@ CREATE TABLE "WarsawTransportState"."dbo"."tram_states" (
   "route_variant_id" int,
   "tram_longitude" double precision,
   "tram_latitude" double precision,
-  "distance" int
+  "distance" int,
+  "is_depot" boolean
 );
 
 CREATE TABLE "WarsawTransportState"."dbo"."routes" (
@@ -33,7 +33,7 @@ CREATE TABLE "WarsawTransportState"."dbo"."routes" (
 );
 
 COMMENT ON COLUMN "WarsawTransportState"."dbo"."routes"."line_name" is 'Concatenation of line_nr and name';
-
+																										   
 CREATE TABLE "WarsawTransportState"."dbo"."route_variants" (
   "id" int PRIMARY KEY,
   "stop_id" int NOT NULL,
