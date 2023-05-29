@@ -1,4 +1,4 @@
-from typing import Collection
+from typing import Collection, Iterable
 
 import pymongo
 from sqlalchemy import create_engine
@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sql_alchemy_classes import Timetables
 from orchestrator.dags import settings
 from datetime import datetime
+from sqlalchemy.sql import text
 from sqlalchemy.exc import IntegrityError
 
 
@@ -26,32 +27,67 @@ def create_postgres_session(postgres_url: str):
     return sessionmaker(source_engine)
 
 
+def map_timetables_to_postgres_object(timetables_collection: Iterable, enum_start: int):
+    for id_nr, timetable in enumerate(timetables_collection, start=enum_start):
+        timetable = Timetables(id=id_nr, day_type=timetable["day_type"],
+                               departure_time=timetable["departure_time"],
+                               departure_time_sequence_nr=timetable["order"],
+                               stop_id=int(str(timetable["unit"]) + timetable["post"]), line_nr=timetable["line"],
+                               created_at=datetime.now())
+        yield timetable
+
+
 def send_timetables_to_postgres() -> [int, int]:
-    stops_collection = get_mongo_collection('Timetable')
+    timetables_collection = get_mongo_collection('Timetable')
     postgres_session = create_postgres_session(settings.POSTGRES_URL)
-    # clean_stops_unit(stops_collection)
+
+    rollbacked_documents = 0
+    committed_documents = 0
 
     with postgres_session() as session:
-        rollbacked_documents = 0
-        committed_documents = 0
-        id = 0
-        for x in stops_collection.find({}):
-            id += 1
-            timetable = Timetables(id=id, day_type=x["day_type"],
-                                   departure_time=x["departure_time"], departure_time_sequence_nr=x["order"],
-                                   stop_id=int(str(x["unit"]) + x["post"]), line_nr=x["line"],
-                                   created_at=datetime.now())
+        session.execute(text('TRUNCATE TABLE dbo.timetables CASCADE'))
+        session.commit()
 
-            session.add(timetable)
+    pypeline = [
+        {"$group": {
+            "_id": {"line": "$line", "route": "$route", "day_type": "$day_type", "unit": "$unit", "post": "$post",
+                    "departure_time": "$departure_time", "order": "$order"}
+                    }
+        }
+    ]
+    timetables_cursor_distinct = timetables_collection.aggregate(pypeline)
+    timetables_list = list()
+    for timetable in timetables_cursor_distinct:
+        timetables_list.append(timetable["_id"])
+
+    batch = 1000
+    offset = 0
+    while True:
+        mapped_timetables = list(map_timetables_to_postgres_object(timetables_list[offset:batch+offset], offset+1))
+        with postgres_session() as session:
             try:
+                session.bulk_save_objects(mapped_timetables)
                 session.commit()
-                committed_documents += 1
+                committed_documents += len(mapped_timetables)
             except IntegrityError:
                 print("1st try: An IntegrityError has occurred")
                 # do not commit this row
                 session.rollback()
-                rollbacked_documents += 1
-                continue
+                for timetable in mapped_timetables:
+                    session.add(timetable)
+                    try:
+                        session.commit()
+                        committed_documents += 1
+                    except IntegrityError:
+                        print("2nd try: An IntegrityError has occurred")
+                        # do not commit this row
+                        session.rollback()
+                        rollbacked_documents += 1
+        if len(mapped_timetables) < batch:
+            break
+
+        offset = offset + batch
+
     return committed_documents, rollbacked_documents
 
 
