@@ -60,8 +60,8 @@ class RouteVariants(Base):
     __table_args__ = {"schema": "dbo"}
 
     id = Column(Integer, primary_key=True)
-    stop_id = Column(Integer, ForeignKey("stops.unit_post"))
-    route_id = Column(Integer, ForeignKey("routes.id"))
+    stop_id = Column(Integer, ForeignKey("dbo.stops.id"))
+    route_id = Column(Integer, ForeignKey("dbo.routes.id"))
     stop_sequence_nr = Column(Integer)
 
 
