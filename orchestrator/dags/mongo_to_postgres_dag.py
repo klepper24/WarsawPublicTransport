@@ -1,23 +1,20 @@
 import json
 import os
+from typing import Collection
 from datetime import timedelta, datetime
 
+import pymongo
 from airflow import DAG
 from airflow.models import Variable
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
-
-from typing import Collection
-import pymongo
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime
-from sql_alchemy_classes import Timetables, Stops, Routes
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql import text
 
-
 import settings
+from sql_alchemy_classes import Timetables, Stops, Routes
 from warsaw_api import WarsawApi
 from general_data_import import MongoConnector
       
