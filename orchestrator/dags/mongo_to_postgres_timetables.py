@@ -60,7 +60,7 @@ def send_timetables_to_postgres() -> [int, int]:
     for timetable in timetables_cursor_distinct:
         timetables_list.append(timetable["_id"])
 
-    batch = 1000
+    batch = 500
     offset = 0
     while True:
         mapped_timetables = list(map_timetables_to_postgres_object(timetables_list[offset:batch+offset], offset+1))
