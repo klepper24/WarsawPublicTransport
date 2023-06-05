@@ -50,7 +50,7 @@ class Timetables(Base):
     day_type = Column(String)
     departure_time = Column(DateTime)
     departure_time_sequence_nr = Column(Integer)
-    stop_id = Column(Integer, ForeignKey("stops.unit_post"))
+    stop_id = Column(Integer, ForeignKey("dbo.stops.id"))
     line_nr = Column(String)
     created_at = Column(DateTime)
 
@@ -60,8 +60,8 @@ class RouteVariants(Base):
     __table_args__ = {"schema": "dbo"}
 
     id = Column(Integer, primary_key=True)
-    stop_id = Column(Integer, ForeignKey("stops.unit_post"))
-    route_id = Column(Integer, ForeignKey("routes.id"))
+    stop_id = Column(Integer, ForeignKey("dbo.stops.id"))
+    route_id = Column(Integer, ForeignKey("dbo.routes.id"))
     stop_sequence_nr = Column(Integer)
 
 
@@ -72,8 +72,8 @@ class TramStates(Base):
     id = Column(Integer, primary_key=True)
     current_tram_time = Column(DateTime)
     stop_state = Column(String)
-    tram_id = Column(Integer, ForeignKey("trams.id"))
-    route_variant_id = Column(Integer, ForeignKey("route_variants.id"))
+    tram_id = Column(Integer, ForeignKey("dbo.trams.id"))
+    route_variant_id = Column(Integer, ForeignKey("dbo.route_variants.id"))
     tram_longitude = Column(Float)
     tram_latitude = Column(Float)
     distance = Column(Integer)

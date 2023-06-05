@@ -4,10 +4,10 @@ import pymongo
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
-from sql_alchemy_classes import Timetables, Stops
+from orchestrator.dags.sql_alchemy_classes import Timetables, Stops
 from sqlalchemy.exc import IntegrityError
 
-import settings
+from orchestrator.dags import settings
 
 
 def _get_mongo_url() -> str:
@@ -62,5 +62,5 @@ def send_stops_to_postgres() -> [int, int]:
 
 
 if __name__ == "__main__":
-    send_stops_to_postgres()
+   send_stops_to_postgres()
 
