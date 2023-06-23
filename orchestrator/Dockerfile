@@ -3,7 +3,7 @@ FROM apache/airflow:2.4.2-python3.8
 USER root
 
 # Install OpenJDK-8
-RUN echo "deb http://security.debian.org/debian-security stretch/updates main" >> /etc/apt/sources.list 
+RUN echo "deb http://archive.debian.org/debian-security stretch/updates main" >> /etc/apt/sources.list 
 RUN mkdir -p /usr/share/man/man1 && \
     apt-get update -y && \
     apt-get install -y openjdk-8-jdk && \
