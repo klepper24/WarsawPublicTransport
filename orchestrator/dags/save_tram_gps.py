@@ -30,6 +30,8 @@ def save_tram_gps(ti) -> None:
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(json_response, f, ensure_ascii=False, indent=4)
 
+    Variable.set("my_variable", filename)
+
 
 ###############################################
 # DAG Definition
