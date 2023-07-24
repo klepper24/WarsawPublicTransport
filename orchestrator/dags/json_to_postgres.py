@@ -40,7 +40,7 @@ default_args = {
 
 
 with DAG(
-        dag_id="trams_to_db_2",
+        dag_id="trams_to_db",
         default_args=default_args,
         schedule_interval=timedelta(seconds=10),
         catchup=False
@@ -57,7 +57,5 @@ with DAG(
         python_callable=json_to_postgres,
         dag=dag
     )
-
-    dataload_task
 
     file_sensor >> dataload_task
