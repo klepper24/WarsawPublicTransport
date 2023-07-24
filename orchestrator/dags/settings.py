@@ -34,6 +34,3 @@ AIRFLOW_OUT_DIR = os.getenv('AIRFLOW_OUT_DIR', default='/opt/airflow/dags/data/'
 
 #POSTGRES_URL = "postgresql://my_user:password123@localhost:5432/WarsawTransportState"
 POSTGRES_URL = "postgresql://my_user:password123@postgres-db:5432/WarsawTransportState"
-
-TODAY_NOW = TODAY_DATETIME.strftime("%Y-%m-%d %H:%M:%S")
-print(TODAY_NOW)
