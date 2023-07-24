@@ -32,7 +32,6 @@ def save_tram_gps(ti) -> None:
 
     Variable.set("my_variable", filename)
 
-
 ###############################################
 # DAG Definition
 ###############################################
