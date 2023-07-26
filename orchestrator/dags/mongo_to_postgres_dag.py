@@ -13,10 +13,10 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql import text
 
-import settings
-from sql_alchemy_classes import Timetables, Stops, Routes
-from warsaw_api import WarsawApi
-from general_data_import import MongoConnector
+import utils.settings
+from utils.sql_alchemy_classes import Timetables, Stops, Routes
+from utils.warsaw_api import WarsawApi
+from general_data_import_dag import MongoConnector
       
 
 def create_postgres_session(postgres_url: str):

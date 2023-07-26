@@ -6,7 +6,7 @@ from airflow.operators.bash import BashOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 
-import settings
+import utils.settings as settings
 
 
 ###############################################
