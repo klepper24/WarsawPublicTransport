@@ -7,8 +7,8 @@ from airflow.models import Variable
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 
-import settings
-from warsaw_api import WarsawApi
+import utils.settings as settings
+from utils.warsaw_api import WarsawApi
 
 ###############################################
 # Parameters
