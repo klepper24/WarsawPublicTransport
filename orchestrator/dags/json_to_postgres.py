@@ -5,7 +5,7 @@ from airflow.models import Variable
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import settings, json
+import utils.settings, json
 
 def create_postgres_session(postgres_url: str):
     source_engine = create_engine(postgres_url, echo=True)
@@ -13,7 +13,7 @@ def create_postgres_session(postgres_url: str):
 
 
 def json_to_postgres():
-    postgres_session = create_postgres_session(settings.POSTGRES_URL)
+    postgres_session = create_postgres_session(utils.settings.POSTGRES_URL)
     session = postgres_session()
 
     filename = Variable.get("my_variable")
@@ -33,7 +33,7 @@ def json_to_postgres():
 
 
 default_args = {
-    "start_date": datetime(settings.NOW.year, settings.NOW.month, settings.NOW.day),
+    "start_date": datetime(utils.settings.NOW.year, utils.settings.NOW.month, utils.settings.NOW.day),
     "retries": 1,
     "retry_delay": timedelta(seconds=10)
 }
@@ -48,7 +48,7 @@ with DAG(
     
     file_sensor = FileSensor(
        task_id='file_sensor',
-        filepath=f'{settings.TRAM_FOLDER}',
+        filepath=f'{utils.settings.TRAM_FOLDER}',
         dag=dag
     )
 

@@ -7,8 +7,8 @@ from airflow.models import Variable
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 
-import settings
-from warsaw_api import WarsawApi
+import utils.settings
+from utils.warsaw_api import WarsawApi
 
 ###############################################
 # Parameters
@@ -25,12 +25,13 @@ def save_tram_gps(ti) -> None:
     api = WarsawApi(apikey=API_KEY)
     json_response = api.get_busestrams(resource_id=RESOURCE_ID, resource_type=2)
     # saving json to file
-    filename = f'{settings.TRAM_FOLDER}tram{settings.TODAY_TIME}.json'
+    filename = f'{utils.settings.TRAM_FOLDER}tram{utils.settings.TODAY_TIME}.json'
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(json_response, f, ensure_ascii=False, indent=4)
 
     Variable.set("my_variable", filename)
+
 
 ###############################################
 # DAG Definition
@@ -39,7 +40,7 @@ def save_tram_gps(ti) -> None:
 DAG_DEFAULT_ARGS = {
     "owner": "airflow",
     "depends_on_past": False,
-    "start_date": datetime(settings.NOW.year, settings.NOW.month, settings.NOW.day),
+    "start_date": datetime(utils.settings.NOW.year, utils.settings.NOW.month, utils.settings.NOW.day),
     "email": ["airflow@airflow.com"],
     "email_on_failure": False,
     "email_on_retry": False,
