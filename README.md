@@ -19,6 +19,10 @@
      - <img width="852" alt="api_connection" src="https://user-images.githubusercontent.com/25270608/199455644-7c6678f6-ca6e-4572-9a50-2740c0cc5a32.PNG">
    * Spark connection:
      - <img width="883" alt="spark_connection" src="https://user-images.githubusercontent.com/25270608/199455662-17740f03-c6bc-4870-aa5b-a22e3cfb8193.PNG">
+   * File Sensor connection:
+     - ![image](https://github.com/klepper24/WarsawPublicTransport/assets/111128309/4998e9d1-370c-4d68-a1e2-23a165fa179f)
+
+
 
 1. Turn on relevant DAGs
 
