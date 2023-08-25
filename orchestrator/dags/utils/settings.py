@@ -16,7 +16,8 @@ TODAY_TIME = TODAY_DATETIME.strftime("%H%M%S")
 
 DELAYS_PROCESSING_HOUR = 23
 
-TRAM_FOLDER = f'{SPARK_OUT_DIR}{TODAY_DATE}/'
+TRAM_FOLDER = f'{SPARK_OUT_DIR}trams_data/'
+ARCHIVE_FOLDER = f'{SPARK_OUT_DIR}archive/'
 
 ZTM_GENERAL_LINK = 'ftp://rozklady.ztm.waw.pl'
 
