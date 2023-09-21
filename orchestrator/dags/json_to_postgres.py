@@ -5,7 +5,8 @@ from airflow.models import Variable
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import utils.settings, json
+import utils.settings, json, os, shutil
+
 
 def create_postgres_session(postgres_url: str):
     source_engine = create_engine(postgres_url, echo=True)
@@ -30,6 +31,16 @@ def json_to_postgres():
     for idx, r in enumerate(data['result'], start=enum_start + 1):
         session.execute(insert_query, {"id": idx, "vehicle_nr": r['VehicleNumber'], "brigade": r['Brigade'], "line_nr": r['Lines'], "created_at": datetime.now()})
     session.commit()
+
+    #insert_data_to_tram_states
+    insert_query = "INSERT INTO dbo.tram_states (id, current_tram_time, tram_id, tram_longitude, tram_latitude) VALUES (:id, :current_tram_time, :tram_id, :tram_longitude, :tram_latitude);"
+    for idx, r in enumerate(data['result'], start=enum_start + 1):
+        session.execute(insert_query, {"id": idx, "current_tram_time": r['Time'], "stop_state": None, "tram_id": idx, "route_variant_id": None, "tram_longitude": r['Lon'], "tram_latitude": r['Lat'], "distance": None, "is_depot": None})
+    session.commit()
+
+    file_name = os.path.basename(filename)
+    destination_path = os.path.join(utils.settings.ARCHIVE_FOLDER, file_name)
+    shutil.move(filename, destination_path)
 
 
 default_args = {
